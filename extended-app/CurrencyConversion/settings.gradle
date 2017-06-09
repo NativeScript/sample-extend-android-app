@@ -1,0 +1,1 @@
+include ':app', ':nativescript', ':widgets-release'
