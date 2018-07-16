@@ -4,7 +4,7 @@ The repository contains everything you need to help you get started with integra
 
 ## Instructions:
 
-Follow the instructions at https://docs.nativescript.org/core/integration-with-existing-ios-and-android-apps/extend-existing-android-app
+Follow the instructions at https://docs.nativescript.org/guides/integration-with-existing-ios-and-android-apps/extend-existing-android-app
 
 
 ## Repository structure
