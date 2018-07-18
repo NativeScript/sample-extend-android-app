@@ -10,10 +10,17 @@ var HtmlView = (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     HtmlView.prototype.createNativeView = function () {
-        var textView = new android.widget.TextView(this._context);
-        textView.setLinksClickable(true);
-        textView.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
-        return textView;
+        return new android.widget.TextView(this._context);
+    };
+    HtmlView.prototype.initNativeView = function () {
+        _super.prototype.initNativeView.call(this);
+        var nativeView = this.nativeViewProtected;
+        nativeView.setLinksClickable(true);
+        nativeView.setMovementMethod(android.text.method.LinkMovementMethod.getInstance());
+    };
+    HtmlView.prototype.resetNativeView = function () {
+        _super.prototype.resetNativeView.call(this);
+        this.nativeViewProtected.setAutoLinkMask(0);
     };
     HtmlView.prototype[html_view_common_1.htmlProperty.getDefault] = function () {
         return "";
@@ -23,8 +30,8 @@ var HtmlView = (function (_super) {
         if (value.search(/<a\s/i) >= 0) {
             mask = 0;
         }
-        this.nativeView.setAutoLinkMask(mask);
-        this.nativeView.setText(android.text.Html.fromHtml(value));
+        this.nativeViewProtected.setAutoLinkMask(mask);
+        this.nativeViewProtected.setText(android.text.Html.fromHtml(value));
     };
     return HtmlView;
 }(html_view_common_1.HtmlViewBase));

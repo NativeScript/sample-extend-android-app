@@ -1,28 +1,31 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var properties_1 = require("../core/properties");
-var FontBase = (function () {
-    function FontBase(fontFamily, fontSize, fontStyle, fontWeight) {
+var Font = (function () {
+    function Font(fontFamily, fontSize, fontStyle, fontWeight) {
         this.fontFamily = fontFamily;
         this.fontSize = fontSize;
         this.fontStyle = fontStyle;
         this.fontWeight = fontWeight;
     }
-    Object.defineProperty(FontBase.prototype, "isItalic", {
+    Object.defineProperty(Font.prototype, "isItalic", {
         get: function () {
             return this.fontStyle === FontStyle.ITALIC;
         },
         enumerable: true,
         configurable: true
     });
-    Object.defineProperty(FontBase.prototype, "isBold", {
+    Object.defineProperty(Font.prototype, "isBold", {
         get: function () {
-            return this.fontWeight === FontWeight.BOLD
-                || this.fontWeight === "700";
+            return this.fontWeight === FontWeight.SEMI_BOLD ||
+                this.fontWeight === FontWeight.BOLD ||
+                this.fontWeight === "700" ||
+                this.fontWeight === FontWeight.EXTRA_BOLD ||
+                this.fontWeight === FontWeight.BLACK;
         },
         enumerable: true,
         configurable: true
     });
-    FontBase.equals = function (value1, value2) {
+    Font.equals = function (value1, value2) {
         if (!value1 && !value2) {
             return true;
         }
@@ -34,10 +37,10 @@ var FontBase = (function () {
             value1.fontStyle === value2.fontStyle &&
             value1.fontWeight === value2.fontWeight;
     };
-    return FontBase;
+    Font.default = undefined;
+    return Font;
 }());
-FontBase.default = undefined;
-exports.FontBase = FontBase;
+exports.Font = Font;
 var FontStyle;
 (function (FontStyle) {
     FontStyle.NORMAL = "normal";
@@ -66,7 +69,7 @@ function parseFontFamily(value) {
     }
     var split = value.split(",");
     for (var i = 0; i < split.length; i++) {
-        var str = split[i].trim().replace(/['"]+/g, '');
+        var str = split[i].trim().replace(/['"]+/g, "");
         if (str) {
             result.push(str);
         }

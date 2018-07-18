@@ -3,59 +3,99 @@ var core_1 = require("@angular/core");
 var router_1 = require("@angular/router");
 var frame_1 = require("tns-core-modules/ui/frame");
 var page_1 = require("tns-core-modules/ui/page");
-var BehaviorSubject_1 = require("rxjs/BehaviorSubject");
-var lang_facade_1 = require("../lang-facade");
+var profiling_1 = require("tns-core-modules/profiling");
+var rxjs_1 = require("rxjs");
 var platform_providers_1 = require("../platform-providers");
 var trace_1 = require("../trace");
 var detached_loader_1 = require("../common/detached-loader");
 var view_util_1 = require("../view-util");
 var ns_location_strategy_1 = require("./ns-location-strategy");
-var PageRoute = (function () {
+var ns_route_reuse_strategy_1 = require("./ns-route-reuse-strategy");
+var PageRoute = /** @class */ (function () {
     function PageRoute(startRoute) {
-        this.activatedRoute = new BehaviorSubject_1.BehaviorSubject(startRoute);
+        this.activatedRoute = new rxjs_1.BehaviorSubject(startRoute);
     }
     return PageRoute;
 }());
 exports.PageRoute = PageRoute;
-/**
- * Reference Cache
- */
-var RefCache = (function () {
-    function RefCache() {
-        this.cache = new Array();
+// Used to "mark" ActivatedRoute snapshots that are handled in PageRouterOutlet
+exports.pageRouterActivatedSymbol = Symbol("page-router-activated");
+exports.loaderRefSymbol = Symbol("loader-ref");
+function destroyComponentRef(componentRef) {
+    if (componentRef) {
+        var loaderRef = componentRef[exports.loaderRefSymbol];
+        if (loaderRef) {
+            loaderRef.destroy();
+        }
+        componentRef.destroy();
     }
-    RefCache.prototype.push = function (componentRef, reusedRoute, outletMap, loaderRef) {
-        this.cache.push({ componentRef: componentRef, reusedRoute: reusedRoute, outletMap: outletMap, loaderRef: loaderRef });
+}
+exports.destroyComponentRef = destroyComponentRef;
+var ChildInjector = /** @class */ (function () {
+    function ChildInjector(providers, parent) {
+        this.providers = providers;
+        this.parent = parent;
+    }
+    ChildInjector.prototype.get = function (token, notFoundValue) {
+        var localValue = this.providers.get(token);
+        if (localValue) {
+            return localValue;
+        }
+        return this.parent.get(token, notFoundValue);
     };
-    RefCache.prototype.pop = function () {
-        return this.cache.pop();
-    };
-    RefCache.prototype.peek = function () {
-        return this.cache[this.cache.length - 1];
-    };
-    Object.defineProperty(RefCache.prototype, "length", {
-        get: function () {
-            return this.cache.length;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    return RefCache;
+    return ChildInjector;
 }());
-var PageRouterOutlet = (function () {
-    function PageRouterOutlet(parentOutletMap, location, name, locationStrategy, componentFactoryResolver, resolver, frame, device, pageFactory) {
+/**
+ * There are cases where multiple activatedRoute nodes should be associated/handled by the same PageRouterOutlet.
+ * We can gat additional ActivatedRoutes nodes when there is:
+ *  - Lazy loading - there is an additional ActivatedRoute node for the RouteConfig with the `loadChildren` setup
+ *  - Componentless routes - there is an additional ActivatedRoute node for the componentless RouteConfig
+ *
+ * Example:
+ *   R  <-- root
+ *   |
+ * feature (lazy module) <-- RouteConfig: { path: "lazy", loadChildren: "./feature/feature.module#FeatureModule" }
+ *   |
+ * module (componentless route) <-- RouteConfig: { path: "module", children: [...] } // Note: No 'component'
+ *   |
+ *  home <-- RouteConfig: { path: "module", component: MyComponent } - this is what we get as activatedRoute param
+ *
+ *  In these cases we will mark the top-most node (feature). NSRouteReuseStrategy will detach the tree there and
+ *  use this ActivateRoute as a kay for caching.
+ */
+function findTopActivatedRouteNodeForOutlet(activatedRoute) {
+    var outletActivatedRoute = activatedRoute;
+    while (outletActivatedRoute.parent &&
+        outletActivatedRoute.parent.routeConfig &&
+        !outletActivatedRoute.parent.routeConfig.component) {
+        outletActivatedRoute = outletActivatedRoute.parent;
+    }
+    return outletActivatedRoute;
+}
+exports.findTopActivatedRouteNodeForOutlet = findTopActivatedRouteNodeForOutlet;
+function routeToString(activatedRoute) {
+    return activatedRoute.pathFromRoot.join("->");
+}
+var PageRouterOutlet = /** @class */ (function () {
+    function PageRouterOutlet(parentContexts, location, name, locationStrategy, componentFactoryResolver, resolver, changeDetector, device, pageFactory, routeReuseStrategy, elRef) {
+        this.parentContexts = parentContexts;
         this.location = location;
         this.locationStrategy = locationStrategy;
         this.componentFactoryResolver = componentFactoryResolver;
         this.resolver = resolver;
-        this.frame = frame;
+        this.changeDetector = changeDetector;
         this.pageFactory = pageFactory;
-        this.refCache = new RefCache();
-        this.isInitialPage = true;
-        parentOutletMap.registerOutlet(name ? name : router_1.PRIMARY_OUTLET, this);
+        this.routeReuseStrategy = routeReuseStrategy;
+        this.activated = null;
+        this._activatedRoute = null;
+        this.activateEvents = new core_1.EventEmitter(); // tslint:disable-line:no-output-rename
+        this.deactivateEvents = new core_1.EventEmitter(); // tslint:disable-line:no-output-rename
+        this.frame = elRef.nativeElement;
+        trace_1.routerLog("PageRouterOutlet.constructor frame:" + this.frame);
+        this.name = name || router_1.PRIMARY_OUTLET;
+        parentContexts.onChildOutletCreated(this.name, this);
         this.viewUtil = new view_util_1.ViewUtil(device);
         this.detachedLoaderFactory = resolver.resolveComponentFactory(detached_loader_1.DetachedLoader);
-        log("DetachedLoaderFactory loaded");
     }
     Object.defineProperty(PageRouterOutlet.prototype, "locationInjector", {
         /** @deprecated from Angular since v4 */
@@ -71,117 +111,110 @@ var PageRouterOutlet = (function () {
     });
     Object.defineProperty(PageRouterOutlet.prototype, "isActivated", {
         get: function () {
-            return !!this.currentActivatedComp;
+            return !!this.activated;
         },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(PageRouterOutlet.prototype, "component", {
         get: function () {
-            if (!this.currentActivatedComp) {
+            if (!this.activated) {
                 throw new Error("Outlet is not activated");
             }
-            return this.currentActivatedComp.instance;
+            return this.activated.instance;
         },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(PageRouterOutlet.prototype, "activatedRoute", {
         get: function () {
-            if (!this.currentActivatedComp) {
+            if (!this.activated) {
                 throw new Error("Outlet is not activated");
             }
-            return this.currentActivatedRoute;
+            return this._activatedRoute;
         },
         enumerable: true,
         configurable: true
     });
+    PageRouterOutlet.prototype.ngOnDestroy = function () {
+        // Clear accumulated modal view page cache when page-router-outlet
+        // destroyed on modal view closing
+        this.routeReuseStrategy.clearModalCache(this.name);
+        this.parentContexts.onChildOutletDestroyed(this.name);
+    };
     PageRouterOutlet.prototype.deactivate = function () {
-        if (this.locationStrategy._isPageNavigatingBack()) {
-            log("PageRouterOutlet.deactivate() while going back - should destroy");
-            var poppedItem = this.refCache.pop();
-            var poppedRef = poppedItem.componentRef;
-            if (this.currentActivatedComp !== poppedRef) {
-                throw new Error("Current componentRef is different for cached componentRef");
-            }
-            this.destroyCacheItem(poppedItem);
-            this.currentActivatedComp = null;
+        if (!this.locationStrategy._isPageNavigatingBack()) {
+            throw new Error("Currently not in page back navigation" +
+                " - component should be detached instead of deactivated.");
         }
-        else {
-            log("PageRouterOutlet.deactivate() while going forward - do nothing");
+        trace_1.routerLog("PageRouterOutlet.deactivate() while going back - should destroy");
+        if (!this.isActivated) {
+            return;
         }
+        var c = this.activated.instance;
+        destroyComponentRef(this.activated);
+        this.activated = null;
+        this._activatedRoute = null;
+        this.deactivateEvents.emit(c);
     };
-    PageRouterOutlet.prototype.clearRefCache = function () {
-        while (this.refCache.length > 0) {
-            this.destroyCacheItem(this.refCache.pop());
+    /**
+     * Called when the `RouteReuseStrategy` instructs to detach the subtree
+     */
+    PageRouterOutlet.prototype.detach = function () {
+        if (!this.isActivated) {
+            throw new Error("Outlet is not activated");
         }
+        trace_1.routerLog("PageRouterOutlet.detach() - " + routeToString(this._activatedRoute));
+        var component = this.activated;
+        this.activated = null;
+        this._activatedRoute = null;
+        return component;
     };
-    PageRouterOutlet.prototype.destroyCacheItem = function (poppedItem) {
-        if (lang_facade_1.isPresent(poppedItem.componentRef)) {
-            poppedItem.componentRef.destroy();
-        }
-        if (lang_facade_1.isPresent(poppedItem.loaderRef)) {
-            poppedItem.loaderRef.destroy();
-        }
+    /**
+     * Called when the `RouteReuseStrategy` instructs to re-attach a previously detached subtree
+     */
+    PageRouterOutlet.prototype.attach = function (ref, activatedRoute) {
+        trace_1.routerLog("PageRouterOutlet.attach() - " + routeToString(activatedRoute));
+        this.activated = ref;
+        this._activatedRoute = activatedRoute;
+        this.markActivatedRoute(activatedRoute);
+        this.locationStrategy._finishBackPageNavigation();
     };
     /**
      * Called by the Router to instantiate a new component during the commit phase of a navigation.
      * This method in turn is responsible for calling the `routerOnActivate` hook of its child.
      */
-    PageRouterOutlet.prototype.activateWith = function (activatedRoute, resolver, outletMap) {
-        this.outletMap = outletMap;
-        this.currentActivatedRoute = activatedRoute;
-        resolver = resolver || this.resolver;
+    PageRouterOutlet.prototype.activateWith = function (activatedRoute, resolver) {
         if (this.locationStrategy._isPageNavigatingBack()) {
-            this.activateOnGoBack(activatedRoute, outletMap);
+            throw new Error("Currently in page back navigation - component should be reattached instead of activated.");
         }
-        else {
-            this.activateOnGoForward(activatedRoute, outletMap, resolver);
-        }
+        trace_1.routerLog("PageRouterOutlet.activateWith() - " + routeToString(activatedRoute));
+        this._activatedRoute = activatedRoute;
+        this.markActivatedRoute(activatedRoute);
+        resolver = resolver || this.resolver;
+        this.activateOnGoForward(activatedRoute, resolver);
+        this.activateEvents.emit(this.activated.instance);
     };
-    PageRouterOutlet.prototype.activateOnGoForward = function (activatedRoute, outletMap, loadedResolver) {
-        var pageRoute = new PageRoute(activatedRoute);
-        var providers = new Map();
-        providers.set(PageRoute, pageRoute);
-        providers.set(router_1.ActivatedRoute, activatedRoute);
-        providers.set(router_1.RouterOutletMap, outletMap);
-        var childInjector = new ChildInjector(providers, this.location.injector);
+    PageRouterOutlet.prototype.activateOnGoForward = function (activatedRoute, loadedResolver) {
+        trace_1.routerLog("PageRouterOutlet.activate() forward navigation - " +
+            "create detached loader in the loader container");
         var factory = this.getComponentFactory(activatedRoute, loadedResolver);
-        if (this.isInitialPage) {
-            log("PageRouterOutlet.activate() initial page - just load component");
-            this.isInitialPage = false;
-            this.currentActivatedComp = this.location.createComponent(factory, this.location.length, childInjector, []);
-            this.currentActivatedComp.changeDetectorRef.detectChanges();
-            this.refCache.push(this.currentActivatedComp, pageRoute, outletMap, null);
-        }
-        else {
-            log("PageRouterOutlet.activate() forward navigation - " +
-                "create detached loader in the loader container");
-            var page = this.pageFactory({
-                isNavigation: true,
-                componentType: factory.componentType
-            });
-            providers.set(page_1.Page, page);
-            var loaderRef = this.location.createComponent(this.detachedLoaderFactory, this.location.length, childInjector, []);
-            loaderRef.changeDetectorRef.detectChanges();
-            this.currentActivatedComp = loaderRef.instance.loadWithFactory(factory);
-            this.loadComponentInPage(page, this.currentActivatedComp);
-            this.currentActivatedComp.changeDetectorRef.detectChanges();
-            this.refCache.push(this.currentActivatedComp, pageRoute, outletMap, loaderRef);
-        }
-    };
-    PageRouterOutlet.prototype.activateOnGoBack = function (activatedRoute, outletMap) {
-        log("PageRouterOutlet.activate() - Back navigation, so load from cache");
-        this.locationStrategy._finishBackPageNavigation();
-        var cacheItem = this.refCache.peek();
-        cacheItem.reusedRoute.activatedRoute.next(activatedRoute);
-        this.outletMap = cacheItem.outletMap;
-        // HACK: Fill the outlet map provided by the router, with the outlets that we have
-        // cached. This is needed because the component is taken from the cache and not
-        // created - so it will not register its child router-outlets to the newly created
-        // outlet map.
-        Object.assign(outletMap, cacheItem.outletMap);
-        this.currentActivatedComp = cacheItem.componentRef;
+        var page = this.pageFactory({
+            isNavigation: true,
+            componentType: factory.componentType,
+        });
+        var providers = new Map();
+        providers.set(page_1.Page, page);
+        providers.set(frame_1.Frame, this.frame);
+        providers.set(PageRoute, new PageRoute(activatedRoute));
+        providers.set(router_1.ActivatedRoute, activatedRoute);
+        providers.set(router_1.ChildrenOutletContexts, this.parentContexts.getOrCreateContext(this.name).children);
+        var childInjector = new ChildInjector(providers, this.location.injector);
+        var loaderRef = this.location.createComponent(this.detachedLoaderFactory, this.location.length, childInjector, []);
+        this.changeDetector.markForCheck();
+        this.activated = loaderRef.instance.loadWithFactory(factory);
+        this.loadComponentInPage(page, this.activated);
+        this.activated[exports.loaderRefSymbol] = loaderRef;
     };
     PageRouterOutlet.prototype.loadComponentInPage = function (page, componentRef) {
         var _this = this;
@@ -191,61 +224,74 @@ var PageRouterOutlet = (function () {
         this.viewUtil.removeChild(componentView.parent, componentView);
         // Add it to the new page
         page.content = componentView;
-        page.on("navigatedFrom", global.Zone.current.wrap(function (args) {
+        page.on(page_1.Page.navigatedFromEvent, global.Zone.current.wrap(function (args) {
             if (args.isBackNavigation) {
-                _this.locationStrategy._beginBackPageNavigation();
+                _this.locationStrategy._beginBackPageNavigation(_this.name);
                 _this.locationStrategy.back();
             }
         }));
-        var navOptions = this.locationStrategy._beginPageNavigation();
+        var navOptions = this.locationStrategy._beginPageNavigation(this.name);
+        // Clear refCache if navigation with clearHistory
+        if (navOptions.clearHistory) {
+            var clearCallback_1 = function () { return setTimeout(function () {
+                _this.routeReuseStrategy.clearCache(_this.name);
+                page.off(page_1.Page.navigatedToEvent, clearCallback_1);
+            }); };
+            page.on(page_1.Page.navigatedToEvent, clearCallback_1);
+        }
         this.frame.navigate({
             create: function () { return page; },
             clearHistory: navOptions.clearHistory,
             animated: navOptions.animated,
             transition: navOptions.transition
         });
-        // Clear refCache if navigation with clearHistory
-        if (navOptions.clearHistory) {
-            this.clearRefCache();
-        }
     };
-    // NOTE: Using private APIs - potential break point!
+    PageRouterOutlet.prototype.markActivatedRoute = function (activatedRoute) {
+        var nodeToMark = findTopActivatedRouteNodeForOutlet(activatedRoute.snapshot);
+        nodeToMark[exports.pageRouterActivatedSymbol] = true;
+        trace_1.routerLog("Activated route marked as page: " + routeToString(nodeToMark));
+    };
     PageRouterOutlet.prototype.getComponentFactory = function (activatedRoute, loadedResolver) {
-        var snapshot = activatedRoute._futureSnapshot;
-        var component = snapshot._routeConfig.component;
-        if (loadedResolver) {
-            return loadedResolver.resolveComponentFactory(component);
-        }
-        else {
-            return this.componentFactoryResolver.resolveComponentFactory(component);
-        }
+        var component = activatedRoute.routeConfig.component;
+        return loadedResolver ?
+            loadedResolver.resolveComponentFactory(component) :
+            this.componentFactoryResolver.resolveComponentFactory(component);
     };
+    PageRouterOutlet.decorators = [
+        { type: core_1.Directive, args: [{ selector: "page-router-outlet" },] },
+    ];
+    /** @nocollapse */
+    PageRouterOutlet.ctorParameters = function () { return [
+        { type: router_1.ChildrenOutletContexts },
+        { type: core_1.ViewContainerRef },
+        { type: String, decorators: [{ type: core_1.Attribute, args: ["name",] }] },
+        { type: ns_location_strategy_1.NSLocationStrategy },
+        { type: core_1.ComponentFactoryResolver },
+        { type: core_1.ComponentFactoryResolver },
+        { type: core_1.ChangeDetectorRef },
+        { type: undefined, decorators: [{ type: core_1.Inject, args: [platform_providers_1.DEVICE,] }] },
+        { type: undefined, decorators: [{ type: core_1.Inject, args: [platform_providers_1.PAGE_FACTORY,] }] },
+        { type: ns_route_reuse_strategy_1.NSRouteReuseStrategy },
+        { type: core_1.ElementRef }
+    ]; };
+    PageRouterOutlet.propDecorators = {
+        activateEvents: [{ type: core_1.Output, args: ["activate",] }],
+        deactivateEvents: [{ type: core_1.Output, args: ["deactivate",] }]
+    };
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [router_1.ActivatedRoute,
+            core_1.ComponentFactoryResolver]),
+        __metadata("design:returntype", void 0)
+    ], PageRouterOutlet.prototype, "activateWith", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [page_1.Page, core_1.ComponentRef]),
+        __metadata("design:returntype", void 0)
+    ], PageRouterOutlet.prototype, "loadComponentInPage", null);
     return PageRouterOutlet;
 }());
-PageRouterOutlet = __decorate([
-    core_1.Directive({ selector: "page-router-outlet" }) // tslint:disable-line:directive-selector
-    ,
-    __param(2, core_1.Attribute("name")),
-    __param(7, core_1.Inject(platform_providers_1.DEVICE)),
-    __param(8, core_1.Inject(platform_providers_1.PAGE_FACTORY)),
-    __metadata("design:paramtypes", [router_1.RouterOutletMap,
-        core_1.ViewContainerRef, String, ns_location_strategy_1.NSLocationStrategy,
-        core_1.ComponentFactoryResolver,
-        core_1.ComponentFactoryResolver,
-        frame_1.Frame, Object, Function])
-], PageRouterOutlet);
 exports.PageRouterOutlet = PageRouterOutlet;
-var ChildInjector = (function () {
-    function ChildInjector(providers, parent) {
-        this.providers = providers;
-        this.parent = parent;
-    }
-    ChildInjector.prototype.get = function (token, notFoundValue) {
-        return this.providers.get(token) || this.parent.get(token, notFoundValue);
-    };
-    return ChildInjector;
-}());
-function log(msg) {
-    trace_1.routerLog(msg);
-}
 //# sourceMappingURL=page-router-outlet.js.map

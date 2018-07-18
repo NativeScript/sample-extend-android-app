@@ -1,4 +1,4 @@
-import { DoCheck, OnDestroy, AfterContentInit, ElementRef, ViewContainerRef, TemplateRef, EmbeddedViewRef, IterableDiffers, ChangeDetectorRef, EventEmitter } from "@angular/core";
+import { AfterContentInit, DoCheck, ElementRef, EmbeddedViewRef, EventEmitter, IterableDiffers, OnDestroy, TemplateRef, ViewContainerRef } from "@angular/core";
 import { ListView, ItemEventData } from "tns-core-modules/ui/list-view";
 import { View } from "tns-core-modules/ui/core/view";
 export declare class ListItemContext {
@@ -17,7 +17,6 @@ export interface SetupItemViewArgs {
 }
 export declare class ListViewComponent implements DoCheck, OnDestroy, AfterContentInit {
     private _iterableDiffers;
-    private _cdr;
     readonly nativeElement: ListView;
     private listView;
     private _items;
@@ -28,7 +27,7 @@ export declare class ListViewComponent implements DoCheck, OnDestroy, AfterConte
     itemTemplateQuery: TemplateRef<ListItemContext>;
     itemTemplate: TemplateRef<ListItemContext>;
     items: any;
-    constructor(_elementRef: ElementRef, _iterableDiffers: IterableDiffers, _cdr: ChangeDetectorRef);
+    constructor(_elementRef: ElementRef, _iterableDiffers: IterableDiffers);
     ngAfterContentInit(): void;
     ngOnDestroy(): void;
     private setItemTemplates();

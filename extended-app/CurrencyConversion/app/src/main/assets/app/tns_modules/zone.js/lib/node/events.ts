@@ -6,16 +6,9 @@
  * found in the LICENSE file at https://angular.io/license
  */
 
-import {makeZoneAwareAddListener, makeZoneAwareListeners, makeZoneAwareRemoveAllListeners, makeZoneAwareRemoveListener, patchMethod} from '../common/utils';
+import {patchEventTarget} from '../common/events';
 
-Zone.__load_patch('EventEmitter', (global: any, Zone: ZoneType, api: _ZonePrivate) => {
-  const callAndReturnFirstParam = (fn: (self: any, args: any[]) => any) => {
-    return (self: any, args: any[]) => {
-      fn(self, args);
-      return self;
-    };
-  };
-
+Zone.__load_patch('EventEmitter', (global: any) => {
   // For EventEmitter
   const EE_ADD_LISTENER = 'addListener';
   const EE_PREPEND_LISTENER = 'prependListener';
@@ -24,27 +17,25 @@ Zone.__load_patch('EventEmitter', (global: any, Zone: ZoneType, api: _ZonePrivat
   const EE_LISTENERS = 'listeners';
   const EE_ON = 'on';
 
-  const zoneAwareAddListener = callAndReturnFirstParam(
-      makeZoneAwareAddListener(EE_ADD_LISTENER, EE_REMOVE_LISTENER, false, true, false));
-  const zoneAwarePrependListener = callAndReturnFirstParam(
-      makeZoneAwareAddListener(EE_PREPEND_LISTENER, EE_REMOVE_LISTENER, false, true, true));
-  const zoneAwareRemoveListener =
-      callAndReturnFirstParam(makeZoneAwareRemoveListener(EE_REMOVE_LISTENER, false));
-  const zoneAwareRemoveAllListeners =
-      callAndReturnFirstParam(makeZoneAwareRemoveAllListeners(EE_REMOVE_ALL_LISTENER));
-  const zoneAwareListeners = makeZoneAwareListeners(EE_LISTENERS);
+  const compareTaskCallbackVsDelegate = function(task: any, delegate: any) {
+    // same callback, same capture, same event name, just return
+    return task.callback === delegate || task.callback.listener === delegate;
+  };
 
-  function patchEventEmitterMethods(obj: any): boolean {
-    if (obj && obj.addListener) {
-      patchMethod(obj, EE_ADD_LISTENER, () => zoneAwareAddListener);
-      patchMethod(obj, EE_PREPEND_LISTENER, () => zoneAwarePrependListener);
-      patchMethod(obj, EE_REMOVE_LISTENER, () => zoneAwareRemoveListener);
-      patchMethod(obj, EE_REMOVE_ALL_LISTENER, () => zoneAwareRemoveAllListeners);
-      patchMethod(obj, EE_LISTENERS, () => zoneAwareListeners);
+  function patchEventEmitterMethods(obj: any) {
+    const result = patchEventTarget(global, [obj], {
+      useG: false,
+      add: EE_ADD_LISTENER,
+      rm: EE_REMOVE_LISTENER,
+      prepend: EE_PREPEND_LISTENER,
+      rmAll: EE_REMOVE_ALL_LISTENER,
+      listeners: EE_LISTENERS,
+      chkDup: false,
+      rt: true,
+      diff: compareTaskCallbackVsDelegate
+    });
+    if (result && result[0]) {
       obj[EE_ON] = obj[EE_ADD_LISTENER];
-      return true;
-    } else {
-      return false;
     }
   }
 

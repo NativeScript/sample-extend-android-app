@@ -75,6 +75,17 @@ var TabViewItemBase = (function (_super) {
             callback(view);
         }
     };
+    TabViewItemBase.prototype.loadView = function (view) {
+        var tabView = this.parent;
+        if (tabView && tabView.items) {
+            if (this.canBeLoaded) {
+                _super.prototype.loadView.call(this, view);
+            }
+        }
+    };
+    TabViewItemBase = __decorate([
+        view_1.CSSType("TabViewItem")
+    ], TabViewItemBase);
     return TabViewItemBase;
 }(view_1.ViewBase));
 exports.TabViewItemBase = TabViewItemBase;
@@ -87,12 +98,23 @@ var TabViewBase = (function (_super) {
     function TabViewBase() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    TabViewBase_1 = TabViewBase;
     Object.defineProperty(TabViewBase.prototype, "androidSelectedTabHighlightColor", {
         get: function () {
             return this.style.androidSelectedTabHighlightColor;
         },
         set: function (value) {
             this.style.androidSelectedTabHighlightColor = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(TabViewBase.prototype, "tabTextFontSize", {
+        get: function () {
+            return this.style.tabTextFontSize;
+        },
+        set: function (value) {
+            this.style.tabTextFontSize = value;
         },
         enumerable: true,
         configurable: true
@@ -152,10 +174,8 @@ var TabViewBase = (function (_super) {
     });
     Object.defineProperty(TabViewBase.prototype, "_childrenCount", {
         get: function () {
-            if (this.items) {
-                return this.items.length;
-            }
-            return 0;
+            var items = this.items;
+            return items ? items.length : 0;
         },
         enumerable: true,
         configurable: true
@@ -177,32 +197,34 @@ var TabViewBase = (function (_super) {
         }
     };
     TabViewBase.prototype.onItemsChanged = function (oldItems, newItems) {
+        var _this = this;
         if (oldItems) {
-            for (var i = 0, count = oldItems.length; i < count; i++) {
-                this._removeView(oldItems[i]);
-            }
+            oldItems.forEach(function (item) { return _this._removeView(item); });
         }
         if (newItems) {
-            for (var i = 0, count = newItems.length; i < count; i++) {
-                var item = newItems[i];
-                if (!item) {
-                    throw new Error("TabViewItem at index " + i + " is undefined.");
-                }
+            newItems.forEach(function (item) {
                 if (!item.view) {
-                    throw new Error("TabViewItem at index " + i + " does not have a view.");
+                    throw new Error("TabViewItem must have a view.");
                 }
-                this._addView(item);
-            }
+                _this._addView(item);
+            });
         }
     };
+    TabViewBase.prototype.onSelectedIndexChanged = function (oldIndex, newIndex) {
+        this.notify({ eventName: TabViewBase_1.selectedIndexChangedEvent, object: this, oldIndex: oldIndex, newIndex: newIndex });
+    };
+    TabViewBase.selectedIndexChangedEvent = "selectedIndexChanged";
+    TabViewBase = TabViewBase_1 = __decorate([
+        view_1.CSSType("TabView")
+    ], TabViewBase);
     return TabViewBase;
+    var TabViewBase_1;
 }(view_1.View));
-TabViewBase.selectedIndexChangedEvent = "selectedIndexChanged";
 exports.TabViewBase = TabViewBase;
 exports.selectedIndexProperty = new view_1.CoercibleProperty({
     name: "selectedIndex", defaultValue: -1, affectsLayout: view_1.isIOS,
     valueChanged: function (target, oldValue, newValue) {
-        target.notify({ eventName: TabViewBase.selectedIndexChangedEvent, object: target, oldIndex: oldValue, newIndex: newValue });
+        target.onSelectedIndexChanged(oldValue, newValue);
     },
     coerceValue: function (target, value) {
         var items = target.items;
@@ -236,6 +258,10 @@ exports.androidOffscreenTabLimitProperty = new view_1.Property({
     valueConverter: function (v) { return parseInt(v); }
 });
 exports.androidOffscreenTabLimitProperty.register(TabViewBase);
+exports.androidTabsPositionProperty = new view_1.Property({ name: "androidTabsPosition", defaultValue: "top" });
+exports.androidTabsPositionProperty.register(TabViewBase);
+exports.tabTextFontSizeProperty = new view_1.CssProperty({ name: "tabTextFontSize", cssName: "tab-text-font-size", valueConverter: function (v) { return parseFloat(v); } });
+exports.tabTextFontSizeProperty.register(view_1.Style);
 exports.tabTextColorProperty = new view_1.CssProperty({ name: "tabTextColor", cssName: "tab-text-color", equalityComparer: view_1.Color.equals, valueConverter: function (v) { return new view_1.Color(v); } });
 exports.tabTextColorProperty.register(view_1.Style);
 exports.tabBackgroundColorProperty = new view_1.CssProperty({ name: "tabBackgroundColor", cssName: "tab-background-color", equalityComparer: view_1.Color.equals, valueConverter: function (v) { return new view_1.Color(v); } });

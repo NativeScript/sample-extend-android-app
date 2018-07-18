@@ -4,6 +4,7 @@ function __export(m) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var view_1 = require("../core/view");
 __export(require("../core/view"));
+var dateComparer = function (x, y) { return (x <= y && x >= y); };
 function getValidTime(picker, hour, minute) {
     if (picker.minuteInterval > 1) {
         var minuteFloor = minute - (minute % picker.minuteInterval);
@@ -71,9 +72,13 @@ var TimePickerBase = (function (_super) {
     function TimePickerBase() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    TimePickerBase = __decorate([
+        view_1.CSSType("TimePicker")
+    ], TimePickerBase);
     return TimePickerBase;
 }(view_1.View));
 exports.TimePickerBase = TimePickerBase;
+TimePickerBase.prototype.recycleNativeView = "auto";
 exports.minHourProperty = new view_1.Property({
     name: "minHour", defaultValue: 0, valueChanged: function (picker, oldValue, newValue) {
         if (!isHourValid(newValue) || !isValidTime(picker)) {
@@ -114,9 +119,6 @@ exports.minuteIntervalProperty = new view_1.Property({
     }, valueConverter: function (v) { return parseInt(v); }
 });
 exports.minuteIntervalProperty.register(TimePickerBase);
-function dateComparer(x, y) {
-    return (x <= y && x >= y) ? true : false;
-}
 exports.minuteProperty = new view_1.Property({
     name: "minute", defaultValue: 0, valueChanged: function (picker, oldValue, newValue) {
         if (!isMinuteValid(newValue) || !isValidTime(picker)) {
@@ -136,7 +138,8 @@ exports.hourProperty = new view_1.Property({
 });
 exports.hourProperty.register(TimePickerBase);
 exports.timeProperty = new view_1.Property({
-    name: "time", equalityComparer: dateComparer, valueChanged: function (picker, oldValue, newValue) {
+    name: "time", defaultValue: new Date(), equalityComparer: dateComparer,
+    valueChanged: function (picker, oldValue, newValue) {
         if (!isValidTime(picker)) {
             throw new Error(getErrorMessage(picker, "time", newValue));
         }

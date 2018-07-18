@@ -1,10 +1,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var properties_1 = require("../core/properties");
 var css_1 = require("../../css");
+var parser_1 = require("../../css/parser");
 var css_selector_1 = require("./css-selector");
 var trace_1 = require("../../trace");
 var file_system_1 = require("../../file-system");
-var application = require("../../application");
+var applicationCommon = require("../../application/application-common");
+var profiling_1 = require("../../profiling");
 var keyframeAnimationModule;
 function ensureKeyframeAnimationModule() {
     if (!keyframeAnimationModule) {
@@ -16,6 +18,15 @@ function ensureCssAnimationParserModule() {
     if (!cssAnimationParserModule) {
         cssAnimationParserModule = require("./css-animation-parser");
     }
+}
+var parser = "rework";
+try {
+    var appConfig = require("~/package.json");
+    if (appConfig && appConfig.cssParser === "nativescript") {
+        parser = "nativescript";
+    }
+}
+catch (e) {
 }
 function mergeCssSelectors() {
     applicationCssSelectors = applicationSelectors.slice();
@@ -30,9 +41,171 @@ var applicationAdditionalSelectors = [];
 var applicationKeyframes = {};
 var animationsSymbol = Symbol("animations");
 var pattern = /('|")(.*?)\1/;
-function onCssChanged(args) {
+var CSSSource = (function () {
+    function CSSSource(_ast, _url, _file, _keyframes, _source) {
+        this._ast = _ast;
+        this._url = _url;
+        this._file = _file;
+        this._keyframes = _keyframes;
+        this._source = _source;
+        this._selectors = [];
+        this.parse();
+    }
+    CSSSource.fromURI = function (uri, keyframes) {
+        var appRelativeUri = uri;
+        if (appRelativeUri.startsWith("/")) {
+            var app = file_system_1.knownFolders.currentApp().path + "/";
+            if (appRelativeUri.startsWith(app)) {
+                appRelativeUri = "./" + appRelativeUri.substr(app.length);
+            }
+        }
+        try {
+            var cssOrAst = global.loadModule(appRelativeUri);
+            if (cssOrAst) {
+                if (typeof cssOrAst === "string") {
+                    return CSSSource.fromSource(cssOrAst, keyframes, appRelativeUri);
+                }
+                else if (typeof cssOrAst === "object" && cssOrAst.type === "stylesheet" && cssOrAst.stylesheet && cssOrAst.stylesheet.rules) {
+                    return CSSSource.fromAST(cssOrAst, keyframes, appRelativeUri);
+                }
+                else {
+                    return CSSSource.fromSource(cssOrAst.toString(), keyframes, appRelativeUri);
+                }
+            }
+        }
+        catch (e) {
+        }
+        return CSSSource.fromFile(appRelativeUri, keyframes);
+    };
+    CSSSource.fromFile = function (url, keyframes) {
+        var cssFileUrl = url.replace(/\..\w+$/, ".css");
+        if (cssFileUrl !== url) {
+            var cssFile = CSSSource.resolveCSSPathFromURL(cssFileUrl);
+            if (cssFile) {
+                return new CSSSource(undefined, url, cssFile, keyframes, undefined);
+            }
+        }
+        var file = CSSSource.resolveCSSPathFromURL(url);
+        return new CSSSource(undefined, url, file, keyframes, undefined);
+    };
+    CSSSource.resolveCSSPathFromURL = function (url) {
+        var app = file_system_1.knownFolders.currentApp().path;
+        var file = resolveFileNameFromUrl(url, app, file_system_1.File.exists);
+        return file;
+    };
+    CSSSource.fromSource = function (source, keyframes, url) {
+        return new CSSSource(undefined, url, undefined, keyframes, source);
+    };
+    CSSSource.fromAST = function (ast, keyframes, url) {
+        return new CSSSource(ast, url, undefined, keyframes, undefined);
+    };
+    Object.defineProperty(CSSSource.prototype, "selectors", {
+        get: function () { return this._selectors; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(CSSSource.prototype, "source", {
+        get: function () { return this._source; },
+        enumerable: true,
+        configurable: true
+    });
+    CSSSource.prototype.load = function () {
+        var file = file_system_1.File.fromPath(this._file);
+        this._source = file.readTextSync();
+    };
+    CSSSource.prototype.parse = function () {
+        try {
+            if (!this._ast) {
+                if (!this._source && this._file) {
+                    this.load();
+                }
+                if (this._source) {
+                    this.parseCSSAst();
+                }
+            }
+            if (this._ast) {
+                this.createSelectors();
+            }
+            else {
+                this._selectors = [];
+            }
+        }
+        catch (e) {
+            trace_1.write("Css styling failed: " + e, trace_1.categories.Error, trace_1.messageType.error);
+            this._selectors = [];
+        }
+    };
+    CSSSource.prototype.parseCSSAst = function () {
+        if (this._source) {
+            switch (parser) {
+                case "nativescript":
+                    var cssparser = new parser_1.CSS3Parser(this._source);
+                    var stylesheet = cssparser.parseAStylesheet();
+                    var cssNS = new parser_1.CSSNativeScript();
+                    this._ast = cssNS.parseStylesheet(stylesheet);
+                    return;
+                case "rework":
+                    this._ast = css_1.parse(this._source, { source: this._file });
+                    return;
+            }
+        }
+    };
+    CSSSource.prototype.createSelectors = function () {
+        if (this._ast) {
+            this._selectors = this.createSelectorsFromImports().concat(this.createSelectorsFromSyntaxTree());
+        }
+    };
+    CSSSource.prototype.createSelectorsFromImports = function () {
+        var selectors = [];
+        var imports = this._ast["stylesheet"]["rules"].filter(function (r) { return r.type === "import"; });
+        for (var i = 0; i < imports.length; i++) {
+            var importItem = imports[i]["import"];
+            var match = importItem && importItem.match(pattern);
+            var url = match && match[2];
+            if (url !== null && url !== undefined) {
+                var cssFile = CSSSource.fromURI(url, this._keyframes);
+                selectors = selectors.concat(cssFile.selectors);
+            }
+        }
+        return selectors;
+    };
+    CSSSource.prototype.createSelectorsFromSyntaxTree = function () {
+        var _this = this;
+        var nodes = this._ast.stylesheet.rules;
+        nodes.filter(isKeyframe).forEach(function (node) { return _this._keyframes[node.name] = node; });
+        var rulesets = css_selector_1.fromAstNodes(nodes);
+        if (rulesets && rulesets.length) {
+            ensureCssAnimationParserModule();
+            rulesets.forEach(function (rule) {
+                rule[animationsSymbol] = cssAnimationParserModule.CssAnimationParser
+                    .keyframeAnimationsFromCSSDeclarations(rule.declarations);
+            });
+        }
+        return rulesets;
+    };
+    CSSSource.prototype.toString = function () {
+        return this._file || this._url || "(in-memory)";
+    };
+    __decorate([
+        profiling_1.profile
+    ], CSSSource.prototype, "load", null);
+    __decorate([
+        profiling_1.profile
+    ], CSSSource.prototype, "parse", null);
+    __decorate([
+        profiling_1.profile
+    ], CSSSource.prototype, "parseCSSAst", null);
+    __decorate([
+        profiling_1.profile
+    ], CSSSource.prototype, "createSelectors", null);
+    __decorate([
+        profiling_1.profile
+    ], CSSSource, "resolveCSSPathFromURL", null);
+    return CSSSource;
+}());
+var onCssChanged = profiling_1.profile("\"style-scope\".onCssChanged", function (args) {
     if (args.cssText) {
-        var parsed = createSelectorsFromCss(args.cssText, args.cssFile, applicationKeyframes);
+        var parsed = CSSSource.fromSource(args.cssText, applicationKeyframes, args.cssFile).selectors;
         if (parsed) {
             applicationAdditionalSelectors.push.apply(applicationAdditionalSelectors, parsed);
             mergeCssSelectors();
@@ -41,128 +214,223 @@ function onCssChanged(args) {
     else if (args.cssFile) {
         loadCss(args.cssFile);
     }
-}
+});
 function onLiveSync(args) {
-    loadCss(application.getCssFileName());
+    loadCss(applicationCommon.getCssFileName());
 }
-function loadCss(cssFile) {
+var loadCss = profiling_1.profile("\"style-scope\".loadCss", function (cssFile) {
     if (!cssFile) {
         return undefined;
     }
-    var result;
-    var cssFileName = file_system_1.path.join(file_system_1.knownFolders.currentApp().path, cssFile);
-    if (file_system_1.File.exists(cssFileName)) {
-        var file = file_system_1.File.fromPath(cssFileName);
-        var applicationCss = file.readTextSync();
-        if (applicationCss) {
-            result = createSelectorsFromCss(applicationCss, cssFileName, applicationKeyframes);
-            applicationSelectors = result;
-            mergeCssSelectors();
-        }
+    var result = CSSSource.fromURI(cssFile, applicationKeyframes).selectors;
+    if (result.length > 0) {
+        applicationSelectors = result;
+        mergeCssSelectors();
     }
-}
-application.on("cssChanged", onCssChanged);
-application.on("livesync", onLiveSync);
-function loadCssOnLaunch() {
-    loadCss(application.getCssFileName());
-    application.off("launch", loadCssOnLaunch);
-}
-if (application.hasLaunched()) {
-    loadCssOnLaunch();
+});
+applicationCommon.on("cssChanged", onCssChanged);
+applicationCommon.on("livesync", onLiveSync);
+exports.loadAppCSS = profiling_1.profile("\"style-scope\".loadAppCSS", function (args) {
+    loadCss(args.cssFile);
+    applicationCommon.off("loadAppCss", exports.loadAppCSS);
+});
+if (applicationCommon.hasLaunched()) {
+    exports.loadAppCSS({ eventName: "loadAppCss", object: applicationCommon, cssFile: applicationCommon.getCssFileName() });
 }
 else {
-    application.on("launch", loadCssOnLaunch);
+    applicationCommon.on("loadAppCss", exports.loadAppCSS);
 }
 var CssState = (function () {
-    function CssState(view, match) {
+    function CssState(view) {
+        var _this = this;
         this.view = view;
-        this.match = match;
+        this._onDynamicStateChangeHandler = function () { return _this.updateDynamicState(); };
     }
-    Object.defineProperty(CssState.prototype, "changeMap", {
-        get: function () {
-            return this.match.changeMap;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    CssState.prototype.apply = function () {
-        var _this = this;
-        this.view._cancelAllAnimations();
-        properties_1.resetCSSProperties(this.view.style);
-        var matchingSelectors = this.match.selectors.filter(function (sel) { return sel.dynamic ? sel.match(_this.view) : true; });
-        if (this.view.inlineStyleSelector) {
-            matchingSelectors.push(this.view.inlineStyleSelector);
+    CssState.prototype.onChange = function () {
+        if (this.view.isLoaded) {
+            this.unsubscribeFromDynamicUpdates();
+            this.updateMatch();
+            this.subscribeForDynamicUpdates();
+            this.updateDynamicState();
         }
-        matchingSelectors.forEach(function (s) { return _this.applyDescriptors(s.ruleset); });
-        this._pendingKeyframeAnimations = matchingSelectors;
-        this.playPendingKeyframeAnimations();
-    };
-    CssState.prototype.playPendingKeyframeAnimations = function () {
-        var _this = this;
-        if (this._pendingKeyframeAnimations && this.view.nativeView) {
-            this._pendingKeyframeAnimations.forEach(function (s) { return _this.playKeyframeAnimationsFromRuleSet(s.ruleset); });
-            this._pendingKeyframeAnimations = null;
+        else {
+            this._matchInvalid = true;
         }
     };
-    CssState.prototype.applyDescriptors = function (ruleset) {
+    CssState.prototype.onLoaded = function () {
+        if (this._matchInvalid) {
+            this.updateMatch();
+        }
+        this.subscribeForDynamicUpdates();
+        this.updateDynamicState();
+    };
+    CssState.prototype.onUnloaded = function () {
+        this.unsubscribeFromDynamicUpdates();
+    };
+    CssState.prototype.updateMatch = function () {
+        this._match = this.view._styleScope ? this.view._styleScope.matchSelectors(this.view) : CssState.emptyMatch;
+        this._matchInvalid = false;
+    };
+    CssState.prototype.updateDynamicState = function () {
         var _this = this;
-        var style = this.view.style;
-        ruleset.declarations.forEach(function (d) {
-            try {
-                var cssPropName = "css:" + d.property;
-                if (cssPropName in style) {
-                    style[cssPropName] = d.value;
+        var matchingSelectors = this._match.selectors.filter(function (sel) { return sel.dynamic ? sel.match(_this.view) : true; });
+        this.view._batchUpdate(function () {
+            _this.stopKeyframeAnimations();
+            _this.setPropertyValues(matchingSelectors);
+            _this.playKeyframeAnimations(matchingSelectors);
+        });
+    };
+    CssState.prototype.playKeyframeAnimations = function (matchingSelectors) {
+        var _this = this;
+        var animations = [];
+        matchingSelectors.forEach(function (selector) {
+            var ruleAnimations = selector.ruleset[animationsSymbol];
+            if (ruleAnimations) {
+                ensureKeyframeAnimationModule();
+                for (var _i = 0, ruleAnimations_1 = ruleAnimations; _i < ruleAnimations_1.length; _i++) {
+                    var animationInfo = ruleAnimations_1[_i];
+                    var animation = keyframeAnimationModule.KeyframeAnimation.keyframeAnimationFromInfo(animationInfo);
+                    if (animation) {
+                        animations.push(animation);
+                    }
+                }
+            }
+        });
+        if (this._playsKeyframeAnimations = animations.length > 0) {
+            animations.map(function (animation) { return animation.play(_this.view); });
+            Object.freeze(animations);
+            this._appliedAnimations = animations;
+        }
+    };
+    CssState.prototype.stopKeyframeAnimations = function () {
+        if (!this._playsKeyframeAnimations) {
+            return;
+        }
+        this._appliedAnimations
+            .filter(function (animation) { return animation.isPlaying; })
+            .forEach(function (animation) { return animation.cancel(); });
+        this._appliedAnimations = CssState.emptyAnimationArray;
+        this.view.style["keyframe:rotate"] = properties_1.unsetValue;
+        this.view.style["keyframe:scaleX"] = properties_1.unsetValue;
+        this.view.style["keyframe:scaleY"] = properties_1.unsetValue;
+        this.view.style["keyframe:translateX"] = properties_1.unsetValue;
+        this.view.style["keyframe:translateY"] = properties_1.unsetValue;
+        this.view.style["keyframe:backgroundColor"] = properties_1.unsetValue;
+        this.view.style["keyframe:opacity"] = properties_1.unsetValue;
+        this._playsKeyframeAnimations = false;
+    };
+    CssState.prototype.setPropertyValues = function (matchingSelectors) {
+        var newPropertyValues = new this.view.style.PropertyBag();
+        matchingSelectors.forEach(function (selector) {
+            return selector.ruleset.declarations.forEach(function (declaration) {
+                return newPropertyValues[declaration.property] = declaration.value;
+            });
+        });
+        Object.freeze(newPropertyValues);
+        var oldProperties = this._appliedPropertyValues;
+        for (var key in oldProperties) {
+            if (!(key in newPropertyValues)) {
+                if (key in this.view.style) {
+                    this.view.style["css:" + key] = properties_1.unsetValue;
                 }
                 else {
-                    _this.view[d.property] = d.value;
+                }
+            }
+        }
+        for (var property in newPropertyValues) {
+            if (oldProperties && property in oldProperties && oldProperties[property] === newPropertyValues[property]) {
+                continue;
+            }
+            var value = newPropertyValues[property];
+            try {
+                if (property in this.view.style) {
+                    this.view.style["css:" + property] = value;
+                }
+                else {
+                    this.view[property] = value;
                 }
             }
             catch (e) {
-                trace_1.write("Failed to apply property [" + d.property + "] with value [" + d.value + "] to " + _this.view + ". " + e, trace_1.categories.Error, trace_1.messageType.error);
-            }
-        });
-    };
-    CssState.prototype.playKeyframeAnimationsFromRuleSet = function (ruleset) {
-        var _this = this;
-        var ruleAnimations = ruleset[animationsSymbol];
-        if (ruleAnimations) {
-            ensureKeyframeAnimationModule();
-            var _loop_1 = function (animationInfo) {
-                var animation = keyframeAnimationModule.KeyframeAnimation.keyframeAnimationFromInfo(animationInfo);
-                if (animation) {
-                    this_1.view._registerAnimation(animation);
-                    animation.play(this_1.view)
-                        .then(function () { _this.view._unregisterAnimation(animation); })
-                        .catch(function (e) { _this.view._unregisterAnimation(animation); });
-                }
-            };
-            var this_1 = this;
-            for (var _i = 0, ruleAnimations_1 = ruleAnimations; _i < ruleAnimations_1.length; _i++) {
-                var animationInfo = ruleAnimations_1[_i];
-                _loop_1(animationInfo);
+                trace_1.write("Failed to apply property [" + property + "] with value [" + value + "] to " + this.view + ". " + e, trace_1.categories.Error, trace_1.messageType.error);
             }
         }
+        this._appliedPropertyValues = newPropertyValues;
     };
+    CssState.prototype.subscribeForDynamicUpdates = function () {
+        var _this = this;
+        var changeMap = this._match.changeMap;
+        changeMap.forEach(function (changes, view) {
+            if (changes.attributes) {
+                changes.attributes.forEach(function (attribute) {
+                    view.addEventListener(attribute + "Change", _this._onDynamicStateChangeHandler);
+                });
+            }
+            if (changes.pseudoClasses) {
+                changes.pseudoClasses.forEach(function (pseudoClass) {
+                    var eventName = ":" + pseudoClass;
+                    view.addEventListener(":" + pseudoClass, _this._onDynamicStateChangeHandler);
+                    if (view[eventName]) {
+                        view[eventName](+1);
+                    }
+                });
+            }
+        });
+        this._appliedChangeMap = changeMap;
+    };
+    CssState.prototype.unsubscribeFromDynamicUpdates = function () {
+        var _this = this;
+        this._appliedChangeMap.forEach(function (changes, view) {
+            if (changes.attributes) {
+                changes.attributes.forEach(function (attribute) {
+                    view.removeEventListener("onPropertyChanged:" + attribute, _this._onDynamicStateChangeHandler);
+                });
+            }
+            if (changes.pseudoClasses) {
+                changes.pseudoClasses.forEach(function (pseudoClass) {
+                    var eventName = ":" + pseudoClass;
+                    view.removeEventListener(eventName, _this._onDynamicStateChangeHandler);
+                    if (view[eventName]) {
+                        view[eventName](-1);
+                    }
+                });
+            }
+        });
+        this._appliedChangeMap = CssState.emptyChangeMap;
+    };
+    CssState.prototype.toString = function () {
+        return this.view + "._cssState";
+    };
+    CssState.emptyChangeMap = Object.freeze(new Map());
+    CssState.emptyPropertyBag = Object.freeze({});
+    CssState.emptyAnimationArray = Object.freeze([]);
+    CssState.emptyMatch = { selectors: [], changeMap: new Map() };
+    __decorate([
+        profiling_1.profile
+    ], CssState.prototype, "updateMatch", null);
+    __decorate([
+        profiling_1.profile
+    ], CssState.prototype, "updateDynamicState", null);
     return CssState;
 }());
 exports.CssState = CssState;
+CssState.prototype._appliedChangeMap = CssState.emptyChangeMap;
+CssState.prototype._appliedPropertyValues = CssState.emptyPropertyBag;
+CssState.prototype._appliedAnimations = CssState.emptyAnimationArray;
+CssState.prototype._matchInvalid = true;
 var StyleScope = (function () {
     function StyleScope() {
-        this._statesByKey = {};
-        this._viewIdToKey = {};
         this._css = "";
         this._localCssSelectors = [];
         this._localCssSelectorVersion = 0;
         this._localCssSelectorsAppliedVersion = 0;
         this._applicationCssSelectorsAppliedVersion = 0;
-        this._keyframes = {};
+        this._keyframes = new Map();
     }
     Object.defineProperty(StyleScope.prototype, "css", {
         get: function () {
             return this._css;
         },
         set: function (value) {
-            this._cssFileName = undefined;
             this.setCss(value);
         },
         enumerable: true,
@@ -171,69 +439,68 @@ var StyleScope = (function () {
     StyleScope.prototype.addCss = function (cssString, cssFileName) {
         this.appendCss(cssString, cssFileName);
     };
+    StyleScope.prototype.addCssFile = function (cssFileName) {
+        this.appendCss(null, cssFileName);
+    };
     StyleScope.prototype.setCss = function (cssString, cssFileName) {
         this._css = cssString;
-        this._reset();
-        this._localCssSelectors = createSelectorsFromCss(this._css, cssFileName, this._keyframes);
+        var cssFile = CSSSource.fromSource(cssString, this._keyframes, cssFileName);
+        this._localCssSelectors = cssFile.selectors;
         this._localCssSelectorVersion++;
         this.ensureSelectors();
     };
     StyleScope.prototype.appendCss = function (cssString, cssFileName) {
-        if (!cssString) {
+        if (!cssString && !cssFileName) {
             return;
         }
-        this._css = this._css + cssString;
-        this._reset();
-        var parsedCssSelectors = createSelectorsFromCss(cssString, cssFileName, this._keyframes);
-        this._localCssSelectors.push.apply(this._localCssSelectors, parsedCssSelectors);
+        var parsedCssSelectors = cssString ? CSSSource.fromSource(cssString, this._keyframes, cssFileName) : CSSSource.fromURI(cssFileName, this._keyframes);
+        this._css = this._css + parsedCssSelectors.source;
+        this._localCssSelectors.push.apply(this._localCssSelectors, parsedCssSelectors.selectors);
         this._localCssSelectorVersion++;
         this.ensureSelectors();
     };
     StyleScope.prototype.getKeyframeAnimationWithName = function (animationName) {
-        var keyframes = this._keyframes[animationName];
-        if (keyframes !== undefined) {
-            ensureKeyframeAnimationModule();
-            var animation = new keyframeAnimationModule.KeyframeAnimationInfo();
-            ensureCssAnimationParserModule();
-            animation.keyframes = cssAnimationParserModule.CssAnimationParser.keyframesArrayFromCSS(keyframes);
-            return animation;
+        var cssKeyframes = this._keyframes[animationName];
+        if (!cssKeyframes) {
+            return;
         }
-        return undefined;
+        ensureKeyframeAnimationModule();
+        var animation = new keyframeAnimationModule.KeyframeAnimationInfo();
+        ensureCssAnimationParserModule();
+        animation.keyframes = cssAnimationParserModule
+            .CssAnimationParser.keyframesArrayFromCSS(cssKeyframes.keyframes);
+        return animation;
     };
     StyleScope.prototype.ensureSelectors = function () {
-        var toMerge;
         if (this._applicationCssSelectorsAppliedVersion !== applicationCssSelectorVersion ||
             this._localCssSelectorVersion !== this._localCssSelectorsAppliedVersion ||
             !this._mergedCssSelectors) {
-            toMerge = [];
-            toMerge.push(applicationCssSelectors);
-            this._applicationCssSelectorsAppliedVersion = applicationCssSelectorVersion;
-            toMerge.push(this._localCssSelectors);
-            this._localCssSelectorsAppliedVersion = this._localCssSelectorVersion;
-            for (var keyframe in applicationKeyframes) {
-                this._keyframes[keyframe] = applicationKeyframes[keyframe];
-            }
+            this._createSelectors();
         }
-        if (toMerge && toMerge.length > 0) {
+        return this._getSelectorsVersion();
+    };
+    StyleScope.prototype._createSelectors = function () {
+        var toMerge = [];
+        toMerge.push(applicationCssSelectors);
+        this._applicationCssSelectorsAppliedVersion = applicationCssSelectorVersion;
+        toMerge.push(this._localCssSelectors);
+        this._localCssSelectorsAppliedVersion = this._localCssSelectorVersion;
+        for (var keyframe in applicationKeyframes) {
+            this._keyframes[keyframe] = applicationKeyframes[keyframe];
+        }
+        if (toMerge.length > 0) {
             this._mergedCssSelectors = toMerge.filter(function (m) { return !!m; }).reduce(function (merged, next) { return merged.concat(next); }, []);
             this._applyKeyframesOnSelectors();
             this._selectors = new css_selector_1.SelectorsMap(this._mergedCssSelectors);
         }
-        return this._getSelectorsVersion();
     };
-    StyleScope.prototype.applySelectors = function (view) {
+    StyleScope.prototype.matchSelectors = function (view) {
         this.ensureSelectors();
-        var state = this._selectors.query(view);
-        var nextState = new CssState(view, state);
-        view._setCssState(nextState);
+        return this._selectors.query(view);
     };
     StyleScope.prototype.query = function (node) {
         this.ensureSelectors();
         return this._selectors.query(node).selectors;
-    };
-    StyleScope.prototype._reset = function () {
-        this._statesByKey = {};
-        this._viewIdToKey = {};
     };
     StyleScope.prototype._getSelectorsVersion = function () {
         return 100000 * this._applicationCssSelectorsAppliedVersion + this._localCssSelectorsAppliedVersion;
@@ -246,9 +513,10 @@ var StyleScope = (function () {
                 ensureCssAnimationParserModule();
                 for (var _i = 0, animations_1 = animations; _i < animations_1.length; _i++) {
                     var animation = animations_1[_i];
-                    var keyframe = this._keyframes[animation.name];
-                    if (keyframe !== undefined) {
-                        animation.keyframes = cssAnimationParserModule.CssAnimationParser.keyframesArrayFromCSS(keyframe);
+                    var cssKeyframe = this._keyframes[animation.name];
+                    if (cssKeyframe !== undefined) {
+                        animation.keyframes = cssAnimationParserModule
+                            .CssAnimationParser.keyframesArrayFromCSS(cssKeyframe.keyframes);
                     }
                 }
             }
@@ -257,75 +525,46 @@ var StyleScope = (function () {
     StyleScope.prototype.getAnimations = function (ruleset) {
         return ruleset[animationsSymbol];
     };
+    __decorate([
+        profiling_1.profile
+    ], StyleScope.prototype, "setCss", null);
+    __decorate([
+        profiling_1.profile
+    ], StyleScope.prototype, "appendCss", null);
+    __decorate([
+        profiling_1.profile
+    ], StyleScope.prototype, "_createSelectors", null);
+    __decorate([
+        profiling_1.profile
+    ], StyleScope.prototype, "matchSelectors", null);
     return StyleScope;
 }());
 exports.StyleScope = StyleScope;
-function createSelectorsFromCss(css, cssFileName, keyframes) {
-    try {
-        var pageCssSyntaxTree = css ? css_1.parse(css, { source: cssFileName }) : null;
-        var pageCssSelectors = [];
-        if (pageCssSyntaxTree) {
-            pageCssSelectors = pageCssSelectors.concat(createSelectorsFromImports(pageCssSyntaxTree, keyframes));
-            pageCssSelectors = pageCssSelectors.concat(createSelectorsFromSyntaxTree(pageCssSyntaxTree, keyframes));
-        }
-        return pageCssSelectors;
-    }
-    catch (e) {
-        trace_1.write("Css styling failed: " + e, trace_1.categories.Error, trace_1.messageType.error);
-    }
-}
-function createSelectorsFromImports(tree, keyframes) {
-    var selectors = [];
-    if (tree !== null && tree !== undefined) {
-        var imports = tree["stylesheet"]["rules"].filter(function (r) { return r.type === "import"; });
-        for (var i = 0; i < imports.length; i++) {
-            var importItem = imports[i]["import"];
-            var match = importItem && importItem.match(pattern);
-            var url = match && match[2];
-            if (url !== null && url !== undefined) {
-                var appDirectory = file_system_1.knownFolders.currentApp().path;
-                var fileName = resolveFileNameFromUrl(url, appDirectory, file_system_1.File.exists);
-                if (fileName !== null) {
-                    var file = file_system_1.File.fromPath(fileName);
-                    var text = file.readTextSync();
-                    if (text) {
-                        selectors = selectors.concat(createSelectorsFromCss(text, fileName, keyframes));
-                    }
-                }
-            }
-        }
-    }
-    return selectors;
-}
-function createSelectorsFromSyntaxTree(ast, keyframes) {
-    var nodes = ast.stylesheet.rules;
-    nodes.filter(isKeyframe).forEach(function (node) { return keyframes[node.name] = node; });
-    var rulesets = css_selector_1.fromAstNodes(nodes);
-    if (rulesets && rulesets.length) {
-        ensureCssAnimationParserModule();
-        rulesets.forEach(function (rule) { return rule[animationsSymbol] = cssAnimationParserModule.CssAnimationParser.keyframeAnimationsFromCSSDeclarations(rule.declarations); });
-    }
-    return rulesets;
-}
 function resolveFileNameFromUrl(url, appDirectory, fileExists) {
     var fileName = typeof url === "string" ? url.trim() : "";
     if (fileName.indexOf("~/") === 0) {
         fileName = fileName.replace("~/", "");
     }
-    var local = file_system_1.path.join(appDirectory, fileName);
-    if (fileExists(local)) {
-        return local;
+    var isAbsolutePath = fileName.indexOf("/") === 0;
+    var absolutePath = isAbsolutePath ? fileName : file_system_1.path.join(appDirectory, fileName);
+    if (fileExists(absolutePath)) {
+        return absolutePath;
     }
-    var external = file_system_1.path.join(appDirectory, "tns_modules", fileName);
-    if (fileExists(external)) {
-        return external;
+    if (!isAbsolutePath) {
+        if (fileName[0] === "~" && fileName[1] !== "/" && fileName[1] !== "\"") {
+            fileName = fileName.substr(1);
+        }
+        var external_1 = file_system_1.path.join(appDirectory, "tns_modules", fileName);
+        if (fileExists(external_1)) {
+            return external_1;
+        }
     }
     return null;
 }
 exports.resolveFileNameFromUrl = resolveFileNameFromUrl;
-function applyInlineStyle(view, styleStr) {
+exports.applyInlineStyle = profiling_1.profile(function applyInlineStyle(view, styleStr) {
     var localStyle = "local { " + styleStr + " }";
-    var inlineRuleSet = createSelectorsFromCss(localStyle, null, {});
+    var inlineRuleSet = CSSSource.fromSource(localStyle, new Map()).selectors;
     var style = view.style;
     inlineRuleSet[0].declarations.forEach(function (d) {
         var name = d.property;
@@ -341,22 +580,8 @@ function applyInlineStyle(view, styleStr) {
             trace_1.write("Failed to apply property [" + d.property + "] with value [" + d.value + "] to " + view + ". " + e, trace_1.categories.Error, trace_1.messageType.error);
         }
     });
-}
-exports.applyInlineStyle = applyInlineStyle;
+});
 function isKeyframe(node) {
     return node.type === "keyframes";
 }
-var InlineSelector = (function (_super) {
-    __extends(InlineSelector, _super);
-    function InlineSelector(ruleSet) {
-        var _this = _super.call(this) || this;
-        _this.specificity = 0x01000000;
-        _this.rarity = 0;
-        _this.dynamic = false;
-        _this.ruleset = ruleSet;
-        return _this;
-    }
-    InlineSelector.prototype.match = function (node) { return true; };
-    return InlineSelector;
-}(css_selector_1.SelectorCore));
 //# sourceMappingURL=style-scope.js.map

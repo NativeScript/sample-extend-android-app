@@ -1,29 +1,8 @@
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
 Object.defineProperty(exports, "__esModule", { value: true });
-var BaseValueAccessor = (function () {
-    function BaseValueAccessor(view) {
-        this.view = view;
-        this.onChange = function (_) { };
-        this.pendingChangeNotification = 0;
-    }
-    BaseValueAccessor.prototype.registerOnChange = function (fn) {
-        var _this = this;
-        this.onChange = function (arg) {
-            if (_this.pendingChangeNotification) {
-                clearTimeout(_this.pendingChangeNotification);
-            }
-            _this.pendingChangeNotification = setTimeout(function () {
-                _this.pendingChangeNotification = 0;
-                fn(arg);
-            }, 20);
-        };
-    };
-    BaseValueAccessor.prototype.writeValue = function (_) {
-        //
-    };
-    BaseValueAccessor.prototype.registerOnTouched = function (_) {
-        //
-    };
-    return BaseValueAccessor;
-}());
-exports.BaseValueAccessor = BaseValueAccessor;
+// This file is only for compatibility with pre 4.4.0 releases.
+// Please use "nativescript-angular/forms/value-accessors/base-value-accessor"
+__export(require("../forms/value-accessors/base-value-accessor"));
 //# sourceMappingURL=base-value-accessor.js.map

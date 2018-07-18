@@ -2,7 +2,7 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-require("application");
+require("tns-core-modules/application");
 __export(require("./platform-common"));
 __export(require("./platform"));
 __export(require("./platform-static"));
@@ -19,9 +19,9 @@ __export(require("./renderer"));
 __export(require("./view-util"));
 __export(require("./resource-loader"));
 var element_registry_1 = require("./element-registry");
-exports.registerElement = element_registry_1.registerElement;
 exports.getViewClass = element_registry_1.getViewClass;
 exports.getViewMeta = element_registry_1.getViewMeta;
 exports.isKnownView = element_registry_1.isKnownView;
-__export(require("./value-accessors/base-value-accessor"));
+exports.registerElement = element_registry_1.registerElement;
+__export(require("./forms/value-accessors/base-value-accessor"));
 //# sourceMappingURL=index.js.map

@@ -26,6 +26,7 @@ public class MyCustomNativeScriptFragment extends android.app.Fragment {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         com.tns.Runtime.callJSMethod(this, "onCreate", void.class, new Object[]{savedInstanceState});
     }
 
@@ -42,16 +43,18 @@ public class MyCustomNativeScriptFragment extends android.app.Fragment {
 
     @Override
     public void onDestroyView() {
-        com.tns.Runtime.callJSMethod(this, "onDestroyView", void.class, null);
+        super.onDestroyView();
+        com.tns.Runtime.callJSMethod(this, "onDestroyView", void.class);
     }
 
     @Override
     public void onDestroy() {
-        com.tns.Runtime.callJSMethod(this, "onDestroy", void.class, null);
+        super.onDestroy();
+        com.tns.Runtime.callJSMethod(this, "onDestroy", void.class);
     }
 
     @Override
     public String toString() {
-        return (String)com.tns.Runtime.callJSMethod(this, "toString", String.class, null);
+        return (String)com.tns.Runtime.callJSMethod(this, "toString", String.class);
     }
 }

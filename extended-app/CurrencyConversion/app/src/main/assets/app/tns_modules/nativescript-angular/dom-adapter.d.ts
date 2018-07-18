@@ -88,6 +88,7 @@ export declare class NativeScriptDomAdapter implements ɵDomAdapter {
     templateAwareRoot(_el: any): any;
     createHtmlDocument(): HTMLDocument;
     defaultDoc(): HTMLDocument;
+    getDefaultDocument(): Document;
     getBoundingClientRect(_el: any): any;
     getTitle(): string;
     setTitle(_doc: Document, _newTitle: string): any;

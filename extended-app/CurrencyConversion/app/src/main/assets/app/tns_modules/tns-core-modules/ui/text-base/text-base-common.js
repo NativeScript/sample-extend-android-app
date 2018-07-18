@@ -65,6 +65,16 @@ var TextBaseCommon = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    Object.defineProperty(TextBaseCommon.prototype, "lineHeight", {
+        get: function () {
+            return this.style.lineHeight;
+        },
+        set: function (value) {
+            this.style.lineHeight = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
     Object.defineProperty(TextBaseCommon.prototype, "textAlignment", {
         get: function () {
             return this.style.textAlignment;
@@ -156,7 +166,7 @@ var TextBaseCommon = (function (_super) {
         configurable: true
     });
     TextBaseCommon.prototype._onFormattedTextContentsChanged = function (data) {
-        if (this.nativeView) {
+        if (this.nativeViewProtected) {
             this[exports.formattedTextProperty.setNative](data.value);
         }
     };
@@ -184,11 +194,13 @@ var TextBaseCommon = (function (_super) {
             callback(text);
         }
     };
-    TextBaseCommon.prototype._setNativeText = function () {
+    TextBaseCommon.prototype._setNativeText = function (reset) {
+        if (reset === void 0) { reset = false; }
     };
     return TextBaseCommon;
 }(view_1.View));
 exports.TextBaseCommon = TextBaseCommon;
+TextBaseCommon.prototype._isSingleLine = false;
 function isBold(fontWeight) {
     return fontWeight === "bold" || fontWeight === "700" || fontWeight === "800" || fontWeight === "900";
 }
@@ -203,6 +215,10 @@ function onFormattedTextPropertyChanged(textBase, oldValue, newValue) {
         textBase._removeView(oldValue);
     }
     if (newValue) {
+        var oldParent = newValue.parent;
+        if (oldParent) {
+            oldParent._removeView(newValue);
+        }
         textBase._addView(newValue);
         newValue.on(view_1.Observable.propertyChangeEvent, textBase._onFormattedTextContentsChanged, textBase);
     }
@@ -221,4 +237,7 @@ exports.textDecorationProperty = new view_1.CssProperty({ name: "textDecoration"
 exports.textDecorationProperty.register(view_1.Style);
 exports.letterSpacingProperty = new view_1.CssProperty({ name: "letterSpacing", cssName: "letter-spacing", defaultValue: 0, affectsLayout: view_1.isIOS, valueConverter: function (v) { return parseFloat(v); } });
 exports.letterSpacingProperty.register(view_1.Style);
+exports.lineHeightProperty = new view_1.CssProperty({ name: "lineHeight", cssName: "line-height", affectsLayout: view_1.isIOS, valueConverter: function (v) { return parseFloat(v); } });
+exports.lineHeightProperty.register(view_1.Style);
+exports.resetSymbol = Symbol("textPropertyDefault");
 //# sourceMappingURL=text-base-common.js.map

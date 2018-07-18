@@ -13,6 +13,9 @@ var FragmentClass = (function (_super) {
         var result = this._callbacks.onCreateAnimator(this, transit, enter, nextAnim, _super.prototype.onCreateAnimator);
         return result;
     };
+    FragmentClass.prototype.onStop = function () {
+        this._callbacks.onStop(this, _super.prototype.onStop);
+    };
     FragmentClass.prototype.onCreate = function (savedInstanceState) {
         if (!this._callbacks) {
             frame_1.setFragmentCallbacks(this);
@@ -34,12 +37,18 @@ var FragmentClass = (function (_super) {
         this._callbacks.onDestroy(this, _super.prototype.onDestroy);
     };
     FragmentClass.prototype.toString = function () {
-        return this._callbacks.toStringOverride(this, _super.prototype.toString);
+        var callbacks = this._callbacks;
+        if (callbacks) {
+            return callbacks.toStringOverride(this, _super.prototype.toString);
+        }
+        else {
+            _super.prototype.toString.call(this);
+        }
     };
+    FragmentClass = __decorate([
+        JavaProxy("com.tns.FragmentClass")
+    ], FragmentClass);
     return FragmentClass;
 }(android.app.Fragment));
-FragmentClass = __decorate([
-    JavaProxy("com.tns.FragmentClass")
-], FragmentClass);
 frame_1.setFragmentClass(FragmentClass);
 //# sourceMappingURL=fragment.js.map

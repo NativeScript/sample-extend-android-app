@@ -1,9 +1,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
-var keyframe_animation_1 = require("tns-core-modules/ui/animation/keyframe-animation");
 var utils_1 = require("./utils");
-var NativeScriptAnimationPlayer = (function () {
+var trace_1 = require("../trace");
+var NativeScriptAnimationPlayer = /** @class */ (function () {
     function NativeScriptAnimationPlayer(target, keyframes, duration, delay, easing) {
         this.target = target;
+        this.duration = duration;
+        this.delay = delay;
         this.parentPlayer = null;
         this._startSubscriptions = [];
         this._doneSubscriptions = [];
@@ -11,6 +13,13 @@ var NativeScriptAnimationPlayer = (function () {
         this._started = false;
         this.initKeyframeAnimation(keyframes, duration, delay, easing);
     }
+    Object.defineProperty(NativeScriptAnimationPlayer.prototype, "totalTime", {
+        get: function () {
+            return this.delay + this.duration;
+        },
+        enumerable: true,
+        configurable: true
+    });
     NativeScriptAnimationPlayer.prototype.init = function () {
     };
     NativeScriptAnimationPlayer.prototype.hasStarted = function () {
@@ -21,6 +30,7 @@ var NativeScriptAnimationPlayer = (function () {
     NativeScriptAnimationPlayer.prototype.onDestroy = function (fn) { this._doneSubscriptions.push(fn); };
     NativeScriptAnimationPlayer.prototype.play = function () {
         var _this = this;
+        trace_1.animationsLog("NativeScriptAnimationPlayer.play");
         if (!this.animation) {
             return;
         }
@@ -34,22 +44,23 @@ var NativeScriptAnimationPlayer = (function () {
             .catch(function (_e) { });
     };
     NativeScriptAnimationPlayer.prototype.pause = function () {
-        throw new Error("AnimationPlayer.pause method is not supported!");
     };
     NativeScriptAnimationPlayer.prototype.finish = function () {
-        throw new Error("AnimationPlayer.finish method is not supported!");
+        this.onFinish();
     };
     NativeScriptAnimationPlayer.prototype.reset = function () {
+        trace_1.animationsLog("NativeScriptAnimationPlayer.reset");
         if (this.animation && this.animation.isPlaying) {
             this.animation.cancel();
         }
     };
     NativeScriptAnimationPlayer.prototype.restart = function () {
+        trace_1.animationsLog("NativeScriptAnimationPlayer.restart");
         this.reset();
         this.play();
     };
     NativeScriptAnimationPlayer.prototype.destroy = function () {
-        this.reset();
+        trace_1.animationsLog("NativeScriptAnimationPlayer.destroy");
         this.onFinish();
     };
     NativeScriptAnimationPlayer.prototype.setPosition = function (_p) {
@@ -59,22 +70,18 @@ var NativeScriptAnimationPlayer = (function () {
         return 0;
     };
     NativeScriptAnimationPlayer.prototype.initKeyframeAnimation = function (keyframes, duration, delay, easing) {
-        var info = new keyframe_animation_1.KeyframeAnimationInfo();
-        info.isForwards = true;
-        info.iterations = 1;
-        info.duration = duration === 0 ? 0.01 : duration;
-        info.delay = delay;
-        info.curve = utils_1.getAnimationCurve(easing);
-        info.keyframes = keyframes.map(utils_1.parseAnimationKeyframe);
-        this.animation = keyframe_animation_1.KeyframeAnimation.keyframeAnimationFromInfo(info);
+        trace_1.animationsLog("NativeScriptAnimationPlayer.initKeyframeAnimation");
+        this.animation = utils_1.createKeyframeAnimation(keyframes, duration, delay, easing);
     };
     NativeScriptAnimationPlayer.prototype.onFinish = function () {
-        if (!this._finished) {
-            this._finished = true;
-            this._started = false;
-            this._doneSubscriptions.forEach(function (fn) { return fn(); });
-            this._doneSubscriptions = [];
+        trace_1.animationsLog("NativeScriptAnimationPlayer.onFinish");
+        if (this._finished) {
+            return;
         }
+        this._finished = true;
+        this._started = false;
+        this._doneSubscriptions.forEach(function (fn) { return fn(); });
+        this._doneSubscriptions = [];
     };
     return NativeScriptAnimationPlayer;
 }());

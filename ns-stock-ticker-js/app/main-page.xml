@@ -25,14 +25,14 @@ https://docs.nativescript.org/ui/components.
     class names available for styling your app at https://docs.nativescript.org/ui/theme.
     -->
     <GridLayout>
-    <ListView items="{{ stocks }}" class="list-group">
-        <ListView.itemTemplate>
-            <GridLayout rows="auto, auto" columns="*, auto" class="list-group-item">
-                <Label class="h2" text="{{ Symbol }}" row="0" col="0"></Label>
-                <Label text="{{ Name }}" row="1" col="0"></Label>
-                <Label text="{{ LastPrice }}" row="0" col="1"></Label>
-            </GridLayout>
-        </ListView.itemTemplate>
-    </ListView>
-</GridLayout>
+        <ListView items="{{ stocks }}" class="list-group">
+            <ListView.itemTemplate>
+                <GridLayout rows="auto, auto" columns="*, auto" class="list-group-item">
+                    <Label class="h2" text="{{ Symbol }}" row="0" col="0"></Label>
+                    <Label text="{{ Name }}" row="1" col="0"></Label>
+                    <Label text="{{ LastPrice }}" row="0" col="1"></Label>
+                </GridLayout>
+            </ListView.itemTemplate>
+        </ListView>
+    </GridLayout>
 </Page>

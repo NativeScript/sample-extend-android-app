@@ -7,4 +7,5 @@ import "./polyfills/console";
 import { ErrorHandler } from "@angular/core";
 export declare function errorHandlerFactory(): ErrorHandler;
 export declare class NativeScriptModule {
+    constructor(parentModule: NativeScriptModule);
 }

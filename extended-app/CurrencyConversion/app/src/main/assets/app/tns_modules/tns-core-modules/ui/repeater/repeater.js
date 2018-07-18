@@ -8,6 +8,7 @@ var stack_layout_1 = require("../layouts/stack-layout");
 var observable_array_1 = require("../../data/observable-array");
 var weak_event_listener_1 = require("../core/weak-event-listener");
 var builder_1 = require("../builder");
+var profiling_1 = require("../../profiling");
 __export(require("../layouts/layout-base"));
 var knownTemplates;
 (function (knownTemplates) {
@@ -93,9 +94,16 @@ var Repeater = (function (_super) {
         var heightAndState = layout_base_1.View.resolveSizeAndState(result.measuredHeight, height, heightMode, 0);
         this.setMeasuredDimension(widthAndState, heightAndState);
     };
+    __decorate([
+        profiling_1.profile
+    ], Repeater.prototype, "onLoaded", null);
+    Repeater = __decorate([
+        layout_base_1.CSSType("Repeater")
+    ], Repeater);
     return Repeater;
 }(layout_base_1.CustomLayoutView));
 exports.Repeater = Repeater;
+Repeater.prototype.recycleNativeView = "auto";
 exports.itemTemplateProperty = new layout_base_1.Property({
     name: "itemTemplate", affectsLayout: true, valueChanged: function (target) {
         target._requestRefresh();

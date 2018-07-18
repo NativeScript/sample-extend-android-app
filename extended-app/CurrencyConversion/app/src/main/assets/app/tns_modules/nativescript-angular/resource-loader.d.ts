@@ -1,5 +1,9 @@
 import { ResourceLoader } from "@angular/compiler";
+import { NSFileSystem } from "./file-system/ns-file-system";
 export declare class FileSystemResourceLoader extends ResourceLoader {
-    resolve(url: string, baseUrl: string): string;
+    private fs;
+    constructor(fs: NSFileSystem);
     get(url: string): Promise<string>;
+    resolve(url: string): string;
+    private resolveRelativeUrls(url);
 }

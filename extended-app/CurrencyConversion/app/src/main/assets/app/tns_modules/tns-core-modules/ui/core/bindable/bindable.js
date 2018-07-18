@@ -14,7 +14,7 @@ exports.traceNotifyEvent = trace_1.notifyEvent;
 exports.isCategorySet = trace_1.isCategorySet;
 exports.traceMessageType = trace_1.messageType;
 var types = require("../../../utils/types");
-var application = require("../../../application");
+var applicationCommon = require("../../../application/application-common");
 var polymerExpressions = require("../../../js-libs/polymer-expressions");
 var contextKey = "context";
 var paramsRegex = /\[\s*(['"])*(\w*)\1\s*\]/;
@@ -102,7 +102,6 @@ var Binding = (function () {
             weak_event_listener_1.removeWeakEventListener(observable, observable_1.Observable.propertyChangeEvent, _this.onSourcePropertyChanged, _this);
         });
         this.propertyChangeListeners.clear();
-        this.sourcesAndProperties = null;
         if (this.source) {
             this.source.clear();
         }
@@ -233,7 +232,7 @@ var Binding = (function () {
     };
     Binding.prototype.prepareExpressionForUpdate = function () {
         var escapedSourceProperty = utils_1.escapeRegexSymbols(this.options.sourceProperty);
-        var expRegex = new RegExp(escapedSourceProperty, 'g');
+        var expRegex = new RegExp(escapedSourceProperty, "g");
         var resultExp = this.options.expression.replace(expRegex, bc.newPropertyValueKey);
         return resultExp;
     };
@@ -270,22 +269,22 @@ var Binding = (function () {
         try {
             var exp_1 = polymerExpressions.PolymerExpressions.getExpression(expression);
             if (exp_1) {
-                var context = this.source && this.source.get && this.source.get() || global;
+                var context_1 = this.source && this.source.get && this.source.get() || global;
                 var model = {};
                 var addedProps = [];
-                var resources = application.getResources();
+                var resources = applicationCommon.getResources();
                 for (var prop in resources) {
-                    if (resources.hasOwnProperty(prop) && !context.hasOwnProperty(prop)) {
-                        context[prop] = resources[prop];
+                    if (resources.hasOwnProperty(prop) && !context_1.hasOwnProperty(prop)) {
+                        context_1[prop] = resources[prop];
                         addedProps.push(prop);
                     }
                 }
-                this.prepareContextForExpression(context, expression, addedProps);
-                model[contextKey] = context;
+                this.prepareContextForExpression(context_1, expression, addedProps);
+                model[contextKey] = context_1;
                 var result = exp_1.getValue(model, isBackConvert, changedModel ? changedModel : model);
                 var addedPropsLength = addedProps.length;
                 for (var i = 0; i < addedPropsLength; i++) {
-                    delete context[addedProps[i]];
+                    delete context_1[addedProps[i]];
                 }
                 addedProps.length = 0;
                 return result;
@@ -347,7 +346,7 @@ var Binding = (function () {
                 }
                 var newProps = sourceProps.slice(changedPropertyIndex + 1);
                 var newObject = data.object[sourceProps[changedPropertyIndex]];
-                if (!types.isNullOrUndefined(newObject) && typeof newObject === 'object') {
+                if (!types.isNullOrUndefined(newObject) && typeof newObject === "object") {
                     this.addPropertyChangeListeners(new WeakRef(newObject), newProps, parentProps);
                 }
             }

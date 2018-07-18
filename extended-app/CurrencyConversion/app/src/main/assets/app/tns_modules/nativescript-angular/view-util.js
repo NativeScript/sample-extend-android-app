@@ -6,13 +6,9 @@ var layout_base_1 = require("tns-core-modules/ui/layouts/layout-base");
 var element_registry_1 = require("./element-registry");
 var platform_1 = require("tns-core-modules/platform");
 var trace_1 = require("./trace");
-var XML_ATTRIBUTES = Object.freeze(["style", "rows", "columns", "fontAttributes"]);
 var ELEMENT_NODE_TYPE = 1;
+var XML_ATTRIBUTES = Object.freeze(["style", "rows", "columns", "fontAttributes"]);
 var whiteSpaceSplitter = /\s+/;
-function isView(view) {
-    return view instanceof view_1.View;
-}
-exports.isView = isView;
 function isLayout(view) {
     return view instanceof layout_base_1.LayoutBase;
 }
@@ -22,75 +18,138 @@ function isContentView(view) {
 }
 exports.isContentView = isContentView;
 var propertyMaps = new Map();
-var ViewUtil = (function () {
+var ViewUtil = /** @class */ (function () {
     function ViewUtil(device) {
         this.isIos = device.os === platform_1.platformNames.ios;
         this.isAndroid = device.os === platform_1.platformNames.android;
     }
-    ViewUtil.prototype.insertChild = function (parent, child, atIndex) {
-        if (atIndex === void 0) { atIndex = -1; }
-        if (!parent || child.meta.skipAddToDom) {
+    ViewUtil.prototype.insertChild = function (parent, child, previous, next) {
+        if (!parent) {
             return;
         }
+        var extendedParent = this.ensureNgViewExtensions(parent);
+        var extendedChild = this.ensureNgViewExtensions(child);
+        if (!previous) {
+            previous = extendedParent.lastChild;
+        }
+        this.addToQueue(extendedParent, extendedChild, previous, next);
+        if (element_registry_1.isInvisibleNode(child)) {
+            extendedChild.parentNode = extendedParent;
+        }
+        if (!element_registry_1.isDetachedElement(child)) {
+            var nextVisual = this.findNextVisual(next);
+            this.addToVisualTree(extendedParent, extendedChild, nextVisual);
+        }
+    };
+    ViewUtil.prototype.addToQueue = function (parent, child, previous, next) {
+        trace_1.viewUtilLog("ViewUtil.addToQueue parent: " + parent + ", view: " + child + ", " +
+            ("previous: " + previous + ", next: " + next));
+        if (previous) {
+            previous.nextSibling = child;
+        }
+        else {
+            parent.firstChild = child;
+        }
+        if (next) {
+            child.nextSibling = next;
+        }
+        else {
+            this.appendToQueue(parent, child);
+        }
+    };
+    ViewUtil.prototype.appendToQueue = function (parent, view) {
+        trace_1.viewUtilLog("ViewUtil.appendToQueue parent: " + parent + " view: " + view);
+        if (parent.lastChild) {
+            parent.lastChild.nextSibling = view;
+        }
+        parent.lastChild = view;
+    };
+    ViewUtil.prototype.addToVisualTree = function (parent, child, next) {
+        trace_1.viewUtilLog("ViewUtil.addToVisualTree parent: " + parent + ", view: " + child + ", next: " + next);
         if (parent.meta && parent.meta.insertChild) {
-            parent.meta.insertChild(parent, child, atIndex);
+            parent.meta.insertChild(parent, child, next);
         }
         else if (isLayout(parent)) {
-            if (child.parent === parent) {
-                var index = parent.getChildIndex(child);
-                if (index !== -1) {
-                    parent.removeChild(child);
-                }
-            }
-            if (atIndex !== -1) {
-                parent.insertChild(child, atIndex);
-            }
-            else {
-                parent.addChild(child);
-            }
+            this.insertToLayout(parent, child, next);
         }
         else if (isContentView(parent)) {
-            // Explicit handling of template anchors inside ContentView
-            if (child.nodeName === "#comment") {
-                parent._addView(child, atIndex);
-            }
-            else {
-                parent.content = child;
-            }
+            parent.content = child;
         }
         else if (parent && parent._addChildFromBuilder) {
             parent._addChildFromBuilder(child.nodeName, child);
         }
-        else {
-            // throw new Error("Parent can"t contain children: " + parent.nodeName + ", " + parent);
+    };
+    ViewUtil.prototype.insertToLayout = function (parent, child, next) {
+        if (child.parent === parent) {
+            this.removeLayoutChild(parent, child);
         }
+        var nextVisual = this.findNextVisual(next);
+        if (nextVisual) {
+            var index = parent.getChildIndex(nextVisual);
+            parent.insertChild(child, index);
+        }
+        else {
+            parent.addChild(child);
+        }
+    };
+    ViewUtil.prototype.findNextVisual = function (view) {
+        var next = view;
+        while (next && element_registry_1.isDetachedElement(next)) {
+            next = next.nextSibling;
+        }
+        return next;
     };
     ViewUtil.prototype.removeChild = function (parent, child) {
-        if (!parent || child.meta.skipAddToDom) {
+        trace_1.viewUtilLog("ViewUtil.removeChild parent: " + parent + " child: " + child);
+        if (!parent) {
             return;
         }
-        if (parent.meta && parent.meta.removeChild) {
-            parent.meta.removeChild(parent, child);
+        var extendedParent = this.ensureNgViewExtensions(parent);
+        var extendedChild = this.ensureNgViewExtensions(child);
+        this.removeFromQueue(extendedParent, extendedChild);
+        this.removeFromVisualTree(extendedParent, extendedChild);
+    };
+    ViewUtil.prototype.removeFromQueue = function (parent, child) {
+        trace_1.viewUtilLog("ViewUtil.removeFromQueue parent: " + parent + " child: " + child);
+        if (parent.firstChild === child && parent.lastChild === child) {
+            parent.firstChild = null;
+            parent.lastChild = null;
+            return;
         }
-        else if (isLayout(parent)) {
-            parent.removeChild(child);
+        if (parent.firstChild === child) {
+            parent.firstChild = child.nextSibling;
         }
-        else if (isContentView(parent)) {
-            if (parent.content === child) {
-                parent.content = null;
-            }
-            // Explicit handling of template anchors inside ContentView
-            if (child.nodeName === "#comment") {
-                parent._removeView(child);
-            }
+        var previous = this.findPreviousElement(parent, child);
+        if (parent.lastChild === child) {
+            parent.lastChild = previous;
         }
-        else if (isView(parent)) {
-            parent._removeView(child);
-        }
-        else {
-            // throw new Error("Unknown parent type: " + parent);
+        if (previous) {
+            previous.nextSibling = child.nextSibling;
         }
     };
+    // NOTE: This one is O(n) - use carefully
+    ViewUtil.prototype.findPreviousElement = function (parent, child) {
+        trace_1.viewUtilLog("ViewUtil.findPreviousElement parent: " + parent + " child: " + child);
+        var previousVisual;
+        if (isLayout(parent)) {
+            previousVisual = this.getPreviousVisualElement(parent, child);
+        }
+        var previous = previousVisual || parent.firstChild;
+        // since detached elements are not added to the visual tree,
+        // we need to find the actual previous sibling of the view,
+        // which may as well be an invisible node
+        while (previous && previous !== child && previous.nextSibling !== child) {
+            previous = previous.nextSibling;
+        }
+        return previous;
+    };
+    ViewUtil.prototype.getPreviousVisualElement = function (parent, child) {
+        var elementIndex = parent.getChildIndex(child);
+        if (elementIndex > 0) {
+            return parent.getChildAt(elementIndex - 1);
+        }
+    };
+    // NOTE: This one is O(n) - use carefully
     ViewUtil.prototype.getChildIndex = function (parent, child) {
         if (isLayout(parent)) {
             return parent.getChildIndex(child);
@@ -98,41 +157,68 @@ var ViewUtil = (function () {
         else if (isContentView(parent)) {
             return child === parent.content ? 0 : -1;
         }
-        else {
-            // throw new Error("Parent can"t contain children: " + parent);
+    };
+    ViewUtil.prototype.removeFromVisualTree = function (parent, child) {
+        trace_1.viewUtilLog("ViewUtil.findPreviousElement parent: " + parent + " child: " + child);
+        if (parent.meta && parent.meta.removeChild) {
+            parent.meta.removeChild(parent, child);
+        }
+        else if (isLayout(parent)) {
+            this.removeLayoutChild(parent, child);
+        }
+        else if (isContentView(parent) && parent.content === child) {
+            parent.content = null;
+            parent.lastChild = null;
+            parent.firstChild = null;
+        }
+        else if (element_registry_1.isView(parent)) {
+            parent._removeView(child);
+        }
+    };
+    ViewUtil.prototype.removeLayoutChild = function (parent, child) {
+        var index = parent.getChildIndex(child);
+        if (index !== -1) {
+            parent.removeChild(child);
         }
     };
     ViewUtil.prototype.createComment = function () {
-        var commentView = this.createView("Comment");
-        commentView.nodeName = "#comment";
-        commentView.visibility = "collapse";
-        return commentView;
+        return new element_registry_1.CommentNode();
     };
     ViewUtil.prototype.createText = function () {
-        var detachedText = this.createView("DetachedText");
-        detachedText.nodeName = "#text";
-        detachedText.visibility = "collapse";
-        return detachedText;
+        return new element_registry_1.TextNode();
     };
     ViewUtil.prototype.createView = function (name) {
-        trace_1.rendererLog("Creating view: " + name);
+        trace_1.viewUtilLog("Creating view: " + name);
         if (!element_registry_1.isKnownView(name)) {
             name = "ProxyViewContainer";
         }
         var viewClass = element_registry_1.getViewClass(name);
         var view = new viewClass();
-        view.nodeName = name;
-        view.meta = element_registry_1.getViewMeta(name);
+        var ngView = this.setNgViewExtensions(view, name);
+        return ngView;
+    };
+    ViewUtil.prototype.ensureNgViewExtensions = function (view) {
+        if (view.hasOwnProperty("meta")) {
+            return view;
+        }
+        else {
+            var name_1 = view.cssType;
+            var ngView = this.setNgViewExtensions(view, name_1);
+            return ngView;
+        }
+    };
+    ViewUtil.prototype.setNgViewExtensions = function (view, name) {
+        var ngView = view;
+        ngView.nodeName = name;
+        ngView.meta = element_registry_1.getViewMeta(name);
         // we're setting the node type of the view
         // to 'element' because of checks done in the
-        // dom animation engine:
-        // tslint:disable-next-line:max-line-length
-        // https://github.com/angular/angular/blob/master/packages/animations/browser/src/render/dom_animation_engine.ts#L70-L81
-        view.nodeType = ELEMENT_NODE_TYPE;
-        return view;
+        // dom animation engine
+        ngView.nodeType = ELEMENT_NODE_TYPE;
+        return ngView;
     };
     ViewUtil.prototype.setProperty = function (view, attributeName, value, namespace) {
-        if (namespace && !this.runsIn(namespace)) {
+        if (!view || (namespace && !this.runsIn(namespace))) {
             return;
         }
         if (attributeName.indexOf(".") !== -1) {
@@ -155,61 +241,29 @@ var ViewUtil = (function () {
             this.setPropertyInternal(view, attributeName, value);
         }
     };
-    // finds the node in the parent's views and returns the next index
-    // returns -1 if the node has no parent or next sibling
-    ViewUtil.prototype.nextSiblingIndex = function (node) {
-        var parent = node.parent;
-        if (!parent) {
-            return -1;
-        }
-        var index = 0;
-        var found = false;
-        parent.eachChild(function (child) {
-            if (child === node) {
-                found = true;
-            }
-            index += 1;
-            return !found;
-        });
-        return found ? index : -1;
-    };
     ViewUtil.prototype.runsIn = function (platform) {
         return (platform === "ios" && this.isIos) ||
             (platform === "android" && this.isAndroid);
     };
     ViewUtil.prototype.setPropertyInternal = function (view, attributeName, value) {
-        trace_1.rendererLog("Setting attribute: " + attributeName);
-        var propMap = this.getProperties(view);
+        trace_1.viewUtilLog("Setting attribute: " + attributeName + "=" + value + " to " + view);
         if (attributeName === "class") {
             this.setClasses(view, value);
+            return;
         }
-        else if (XML_ATTRIBUTES.indexOf(attributeName) !== -1) {
+        if (XML_ATTRIBUTES.indexOf(attributeName) !== -1) {
             view._applyXmlAttribute(attributeName, value);
+            return;
         }
-        else if (propMap.has(attributeName)) {
+        var propMap = this.getProperties(view);
+        var propertyName = propMap.get(attributeName);
+        if (propertyName) {
             // We have a lower-upper case mapped property.
-            var propertyName = propMap.get(attributeName);
-            view[propertyName] = this.convertValue(value);
+            view[propertyName] = value;
+            return;
         }
-        else {
-            // Unknown attribute value -- just set it to our object as is.
-            view[attributeName] = this.convertValue(value);
-        }
-    };
-    ViewUtil.prototype.convertValue = function (value) {
-        if (typeof (value) !== "string" || value === "") {
-            return value;
-        }
-        var valueAsNumber = +value;
-        if (!isNaN(valueAsNumber)) {
-            return valueAsNumber;
-        }
-        else if (value && (value.toLowerCase() === "true" || value.toLowerCase() === "false")) {
-            return value.toLowerCase() === "true" ? true : false;
-        }
-        else {
-            return value;
-        }
+        // Unknown attribute value -- just set it to our object as is.
+        view[attributeName] = value;
     };
     ViewUtil.prototype.getProperties = function (instance) {
         var type = instance && instance.constructor;

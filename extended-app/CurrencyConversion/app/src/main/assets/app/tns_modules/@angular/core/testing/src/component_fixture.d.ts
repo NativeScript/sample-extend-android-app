@@ -9,7 +9,7 @@ import { ChangeDetectorRef, ComponentRef, DebugElement, ElementRef, NgZone } fro
 /**
  * Fixture for debugging and testing a component.
  *
- * @stable
+ *
  */
 export declare class ComponentFixture<T> {
     componentRef: ComponentRef<T>;
@@ -35,6 +35,7 @@ export declare class ComponentFixture<T> {
      * The ChangeDetectorRef for the component
      */
     changeDetectorRef: ChangeDetectorRef;
+    private _renderer;
     private _isStable;
     private _isDestroyed;
     private _resolve;
@@ -71,6 +72,11 @@ export declare class ComponentFixture<T> {
      * asynchronous change detection.
      */
     whenStable(): Promise<any>;
+    private _getRenderer();
+    /**
+      * Get a promise that resolves when the ui state is stable following animations.
+      */
+    whenRenderingDone(): Promise<any>;
     /**
      * Trigger component destruction.
      */

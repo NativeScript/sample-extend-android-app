@@ -57,7 +57,6 @@ function initializePinchGestureListener() {
             var _this = _super.call(this) || this;
             _this._observer = observer;
             _this._target = target;
-            _this._density = utils_1.layout.getDisplayDensity();
             return global.__native(_this);
         }
         PinchGestureListenerImpl.prototype.onScaleBegin = function (detector) {

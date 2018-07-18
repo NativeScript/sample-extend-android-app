@@ -1,7 +1,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var trace_1 = require("./trace");
-var lang_facade_1 = require("./lang-facade");
-var NativeScriptDomAdapter = (function () {
+var NativeScriptDomAdapter = /** @class */ (function () {
     function NativeScriptDomAdapter() {
         this.resourceLoaderType = null;
     }
@@ -24,13 +23,13 @@ var NativeScriptDomAdapter = (function () {
         return true;
     };
     NativeScriptDomAdapter.prototype.log = function (arg) {
-        lang_facade_1.print(arg);
+        console.log(arg);
     };
     NativeScriptDomAdapter.prototype.logError = function (arg) {
-        lang_facade_1.print(arg);
+        console.log(arg);
     };
     NativeScriptDomAdapter.prototype.logGroup = function (arg) {
-        lang_facade_1.print(arg);
+        console.log(arg);
     };
     NativeScriptDomAdapter.prototype.logGroupEnd = function () {
     };
@@ -119,6 +118,7 @@ var NativeScriptDomAdapter = (function () {
     NativeScriptDomAdapter.prototype.templateAwareRoot = function (_el /** TODO #9100 */) { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.createHtmlDocument = function () { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.defaultDoc = function () { throw new Error("Not implemented!"); };
+    NativeScriptDomAdapter.prototype.getDefaultDocument = function () { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.getBoundingClientRect = function (_el /** TODO #9100 */) { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.getTitle = function () { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.setTitle = function (_doc, _newTitle) { throw new Error("Not implemented!"); };
@@ -141,7 +141,7 @@ var NativeScriptDomAdapter = (function () {
     NativeScriptDomAdapter.prototype.getLocation = function () { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.getBaseHref = function () { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.resetBaseElement = function () { throw new Error("Not implemented!"); };
-    NativeScriptDomAdapter.prototype.getUserAgent = function () { throw new Error("Not implemented!"); };
+    NativeScriptDomAdapter.prototype.getUserAgent = function () { return "Fake user agent"; };
     NativeScriptDomAdapter.prototype.setData = function (_element /** TODO #9100 */, _name, _value) { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.getComputedStyle = function (_element /** TODO #9100 */) { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.getData = function (_element /** TODO #9100 */, _name) { throw new Error("Not implemented!"); };
@@ -151,7 +151,7 @@ var NativeScriptDomAdapter = (function () {
     NativeScriptDomAdapter.prototype.getAnimationPrefix = function () { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.getTransitionEnd = function () { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.supportsAnimation = function () { throw new Error("Not implemented!"); };
-    NativeScriptDomAdapter.prototype.supportsCookies = function () { throw new Error("Not implemented!"); };
+    NativeScriptDomAdapter.prototype.supportsCookies = function () { return false; };
     NativeScriptDomAdapter.prototype.getCookie = function (_name) { throw new Error("Not implemented!"); };
     NativeScriptDomAdapter.prototype.setCookie = function (_name, _value) { throw new Error("Not implemented!"); };
     return NativeScriptDomAdapter;

@@ -1,8 +1,12 @@
-import { ViewContainerRef, Type } from "@angular/core";
+import { NgModuleRef, Type, ViewContainerRef } from "@angular/core";
+import { NSLocationStrategy } from "../router/ns-location-strategy";
 export interface ModalDialogOptions {
     context?: any;
     fullscreen?: boolean;
+    animated?: boolean;
+    stretched?: boolean;
     viewContainerRef?: ViewContainerRef;
+    moduleRef?: NgModuleRef<any>;
 }
 export declare class ModalDialogParams {
     context: any;
@@ -10,8 +14,10 @@ export declare class ModalDialogParams {
     constructor(context: any, closeCallback: (...args) => any);
 }
 export declare class ModalDialogService {
-    showModal(type: Type<any>, options: ModalDialogOptions): Promise<any>;
-    private static showDialog(type, options, doneCallback, containerRef, resolver, parentPage, pageFactory);
+    private location;
+    constructor(location: NSLocationStrategy);
+    showModal(type: Type<any>, {viewContainerRef, moduleRef, context, fullscreen, animated, stretched}: ModalDialogOptions): Promise<any>;
+    private _showDialog({containerRef, context, doneCallback, fullscreen, animated, stretched, pageFactory, parentView, resolver, type});
 }
 export declare class ModalDialogHost {
     constructor();

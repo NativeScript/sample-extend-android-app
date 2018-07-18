@@ -1,6 +1,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var frame_1 = require("./frame");
+var globals = require("../../globals");
 var appModule = require("../../application");
+if (global.__snapshot || global.__snapshotEnabled) {
+    globals.install();
+}
 var NativeScriptActivity = (function (_super) {
     __extends(NativeScriptActivity, _super);
     function NativeScriptActivity() {
@@ -14,6 +18,10 @@ var NativeScriptActivity = (function (_super) {
             frame_1.setActivityCallbacks(this);
         }
         this._callbacks.onCreate(this, savedInstanceState, _super.prototype.onCreate);
+    };
+    NativeScriptActivity.prototype.onNewIntent = function (intent) {
+        _super.prototype.onNewIntent.call(this, intent);
+        _super.prototype.setIntent.call(this, intent);
     };
     NativeScriptActivity.prototype.onSaveInstanceState = function (outState) {
         this._callbacks.onSaveInstanceState(this, outState, _super.prototype.onSaveInstanceState);
@@ -36,9 +44,9 @@ var NativeScriptActivity = (function (_super) {
     NativeScriptActivity.prototype.onActivityResult = function (requestCode, resultCode, data) {
         this._callbacks.onActivityResult(this, requestCode, resultCode, data, _super.prototype.onActivityResult);
     };
+    NativeScriptActivity = __decorate([
+        JavaProxy("com.tns.NativeScriptActivity")
+    ], NativeScriptActivity);
     return NativeScriptActivity;
 }(android.app.Activity));
-NativeScriptActivity = __decorate([
-    JavaProxy("com.tns.NativeScriptActivity")
-], NativeScriptActivity);
 //# sourceMappingURL=activity.js.map

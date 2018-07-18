@@ -1,7 +1,21 @@
 Object.defineProperty(exports, "__esModule", { value: true });
+var enums_1 = require("../enums");
+var trace_1 = require("../../trace");
 var properties_1 = require("../core/properties");
 var animation_1 = require("./animation");
 var style_properties_1 = require("../styling/style-properties");
+var Keyframes = (function () {
+    function Keyframes() {
+    }
+    return Keyframes;
+}());
+exports.Keyframes = Keyframes;
+var UnparsedKeyframe = (function () {
+    function UnparsedKeyframe() {
+    }
+    return UnparsedKeyframe;
+}());
+exports.UnparsedKeyframe = UnparsedKeyframe;
 var KeyframeDeclaration = (function () {
     function KeyframeDeclaration() {
     }
@@ -10,6 +24,7 @@ var KeyframeDeclaration = (function () {
 exports.KeyframeDeclaration = KeyframeDeclaration;
 var KeyframeInfo = (function () {
     function KeyframeInfo() {
+        this.curve = enums_1.AnimationCurve.ease;
     }
     return KeyframeInfo;
 }());
@@ -33,8 +48,8 @@ var KeyframeAnimation = (function () {
         this.iterations = 1;
     }
     KeyframeAnimation.keyframeAnimationFromInfo = function (info) {
-        var animations = new Array();
         var length = info.keyframes.length;
+        var animations = new Array();
         var startDuration = 0;
         if (info.isReverse) {
             for (var index_1 = length - 1; index_1 >= 0; index_1--) {
@@ -56,12 +71,7 @@ var KeyframeAnimation = (function () {
                 }
             }
         }
-        for (var index_4 = 1; index_4 < length; index_4++) {
-            var a = animations[index_4];
-            if (a["curve"] === undefined) {
-                a["curve"] = info.curve;
-            }
-        }
+        animations.map(function (a) { return a["curve"] ? a : Object.assign(a, { curve: info.curve }); });
         var animation = new KeyframeAnimation();
         animation.delay = info.delay;
         animation.iterations = info.iterations;
@@ -98,25 +108,31 @@ var KeyframeAnimation = (function () {
         configurable: true
     });
     KeyframeAnimation.prototype.cancel = function () {
-        if (this._isPlaying) {
-            this._isPlaying = false;
-            for (var i = this._nativeAnimations.length - 1; i >= 0; i--) {
-                var animation = this._nativeAnimations[i];
-                if (animation.isPlaying) {
-                    animation.cancel();
-                }
-            }
-            if (this._nativeAnimations.length > 0) {
-                var animation = this._nativeAnimations[0];
-                this._resetAnimationValues(this._target, animation);
-            }
-            this._rejectAnimationFinishedPromise();
+        if (!this.isPlaying) {
+            trace_1.write("Keyframe animation is already playing.", trace_1.categories.Animation, trace_1.messageType.warn);
+            return;
         }
+        this._isPlaying = false;
+        for (var i = this._nativeAnimations.length - 1; i >= 0; i--) {
+            var animation = this._nativeAnimations[i];
+            if (animation.isPlaying) {
+                animation.cancel();
+            }
+        }
+        if (this._nativeAnimations.length > 0) {
+            var animation = this._nativeAnimations[0];
+            this._resetAnimationValues(this._target, animation);
+        }
+        this._rejectAnimationFinishedPromise();
     };
     KeyframeAnimation.prototype.play = function (view) {
         var _this = this;
         if (this._isPlaying) {
-            throw new Error("Animation is already playing.");
+            var reason_1 = "Keyframe animation is already playing.";
+            trace_1.write(reason_1, trace_1.categories.Animation, trace_1.messageType.warn);
+            return new Promise(function (resolve, reject) {
+                reject(reason_1);
+            });
         }
         var animationFinishedPromise = new Promise(function (resolve, reject) {
             _this._resolve = resolve;

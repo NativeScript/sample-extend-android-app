@@ -1,8 +1,54 @@
-function __export(m) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(require("./debug-common"));
+var file_system_1 = require("../file-system");
+var platform_1 = require("../platform");
+exports.debug = true;
+var applicationRootPath;
+function ensureAppRootPath() {
+    if (!applicationRootPath) {
+        applicationRootPath = file_system_1.knownFolders.currentApp().path;
+        applicationRootPath = applicationRootPath.substr(0, applicationRootPath.length - "app/".length);
+    }
+}
+var Source = (function () {
+    function Source(uri, line, column) {
+        ensureAppRootPath();
+        if (uri.length > applicationRootPath.length && uri.substr(0, applicationRootPath.length) === applicationRootPath) {
+            this._uri = "file://" + uri.substr(applicationRootPath.length);
+        }
+        else {
+            this._uri = uri;
+        }
+        this._line = line;
+        this._column = column;
+    }
+    Object.defineProperty(Source.prototype, "uri", {
+        get: function () { return this._uri; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Source.prototype, "line", {
+        get: function () { return this._line; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Source.prototype, "column", {
+        get: function () { return this._column; },
+        enumerable: true,
+        configurable: true
+    });
+    Source.prototype.toString = function () {
+        return this._uri + ":" + this._line + ":" + this._column;
+    };
+    Source.get = function (object) {
+        return object[Source._source];
+    };
+    Source.set = function (object, src) {
+        object[Source._source] = src;
+    };
+    Source._source = Symbol("source");
+    return Source;
+}());
+exports.Source = Source;
 var ScopeError = (function (_super) {
     __extends(ScopeError, _super);
     function ScopeError(inner, message) {
@@ -15,7 +61,7 @@ var ScopeError = (function (_super) {
             formattedMessage = message || inner.message || undefined;
         }
         _this = _super.call(this, formattedMessage) || this;
-        _this.stack = "Error: " + _this.message + "\n" + inner.stack.substr(inner.stack.indexOf("\n") + 1);
+        _this.stack = platform_1.isAndroid ? "Error: " + _this.message + "\n" + inner.stack.substr(inner.stack.indexOf("\n") + 1) : inner.stack;
         _this.message = formattedMessage;
         return _this;
     }

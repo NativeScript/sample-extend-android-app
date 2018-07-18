@@ -129,7 +129,7 @@ var FormattedString = (function (_super) {
                 this._removeView(span);
             }
         }
-        this.notifyPropertyChange('.', this);
+        this.notifyPropertyChange(".", this);
     };
     FormattedString.prototype.addPropertyChangeHandler = function (span) {
         var style = span.style;

@@ -2,10 +2,13 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-var style_properties_1 = require("../../styling/style-properties");
-var debug_1 = require("../../../utils/debug");
 var view_base_1 = require("../view-base");
+var style_properties_1 = require("../../styling/style-properties");
 var gestures_1 = require("../../gestures");
+var builder_1 = require("../../builder");
+var style_scope_1 = require("../../styling/style-scope");
+var linear_gradient_1 = require("../../styling/linear-gradient");
+exports.LinearGradient = linear_gradient_1.LinearGradient;
 __export(require("../../styling/style-properties"));
 __export(require("../view-base"));
 var animationModule;
@@ -14,6 +17,12 @@ function ensureAnimationModule() {
         animationModule = require("ui/animation");
     }
 }
+function CSSType(type) {
+    return function (cls) {
+        cls.prototype.cssType = type;
+    };
+}
+exports.CSSType = CSSType;
 function PseudoClassHandler() {
     var pseudoClasses = [];
     for (var _i = 0; _i < arguments.length; _i++) {
@@ -36,6 +45,7 @@ function PseudoClassHandler() {
     };
 }
 exports.PseudoClassHandler = PseudoClassHandler;
+exports._rootModalViews = new Array();
 var ViewCommon = (function (_super) {
     __extends(ViewCommon, _super);
     function ViewCommon() {
@@ -43,6 +53,53 @@ var ViewCommon = (function (_super) {
         _this._gestureObservers = {};
         return _this;
     }
+    Object.defineProperty(ViewCommon.prototype, "css", {
+        get: function () {
+            var scope = this._styleScope;
+            return scope && scope.css;
+        },
+        set: function (value) {
+            this._updateStyleScope(undefined, undefined, value);
+        },
+        enumerable: true,
+        configurable: true
+    });
+    ViewCommon.prototype.addCss = function (cssString) {
+        this._updateStyleScope(undefined, cssString);
+    };
+    ViewCommon.prototype.addCssFile = function (cssFileName) {
+        this._updateStyleScope(cssFileName);
+    };
+    ViewCommon.prototype._updateStyleScope = function (cssFileName, cssString, css) {
+        var scope = this._styleScope;
+        if (!scope) {
+            scope = new style_scope_1.StyleScope();
+            this.setScopeProperty(scope, cssFileName, cssString, css);
+            this._inheritStyleScope(scope);
+            this._isStyleScopeHost = true;
+        }
+        else {
+            this.setScopeProperty(scope, cssFileName, cssString, css);
+            this._onCssStateChange();
+        }
+    };
+    ViewCommon.prototype.setScopeProperty = function (scope, cssFileName, cssString, css) {
+        if (cssFileName !== undefined) {
+            scope.addCssFile(cssFileName);
+        }
+        else if (cssString !== undefined) {
+            scope.addCss(cssString);
+        }
+        else if (css !== undefined) {
+            scope.css = css;
+        }
+    };
+    ViewCommon.prototype._setupAsRootView = function (context) {
+        _super.prototype._setupAsRootView.call(this, context);
+        if (!this._styleScope) {
+            this._updateStyleScope();
+        }
+    };
     ViewCommon.prototype.observe = function (type, callback, thisArg) {
         if (!this._gestureObservers[type]) {
             this._gestureObservers[type] = [];
@@ -110,6 +167,106 @@ var ViewCommon = (function (_super) {
         else if (typeof arg === "number") {
             this._disconnectGestureObservers(arg);
         }
+    };
+    ViewCommon.prototype._onLivesync = function () {
+        exports._rootModalViews.forEach(function (v) { return v.closeModal(); });
+        exports._rootModalViews.length = 0;
+        return false;
+    };
+    ViewCommon.prototype.onBackPressed = function () {
+        return false;
+    };
+    ViewCommon.prototype._getFragmentManager = function () {
+        return undefined;
+    };
+    ViewCommon.prototype.showModal = function () {
+        if (arguments.length === 0) {
+            throw new Error("showModal without parameters is deprecated. Please call showModal on a view instance instead.");
+        }
+        else {
+            var firstAgrument = arguments[0];
+            var context_1 = arguments[1];
+            var closeCallback = arguments[2];
+            var fullscreen = arguments[3];
+            var animated = arguments[4];
+            var stretched = arguments[5];
+            var view = firstAgrument instanceof ViewCommon
+                ? firstAgrument : builder_1.createViewFromEntry({ moduleName: firstAgrument });
+            view._showNativeModalView(this, context_1, closeCallback, fullscreen, animated, stretched);
+            return view;
+        }
+    };
+    ViewCommon.prototype.closeModal = function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        var closeCallback = this._closeModalCallback;
+        if (closeCallback) {
+            closeCallback.apply(undefined, arguments);
+        }
+        else {
+            var parent_1 = this.parent;
+            if (parent_1) {
+                parent_1.closeModal.apply(parent_1, args);
+            }
+        }
+    };
+    Object.defineProperty(ViewCommon.prototype, "modal", {
+        get: function () {
+            return this._modal;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    ViewCommon.prototype._showNativeModalView = function (parent, context, closeCallback, fullscreen, animated, stretched) {
+        exports._rootModalViews.push(this);
+        parent._modal = this;
+        this._modalParent = parent;
+        this._modalContext = context;
+        var that = this;
+        this._closeModalCallback = function () {
+            if (that._closeModalCallback) {
+                var modalIndex = exports._rootModalViews.indexOf(that);
+                exports._rootModalViews.splice(modalIndex);
+                that._hideNativeModalView(parent);
+                that._modalParent = null;
+                that._modalContext = null;
+                that._closeModalCallback = null;
+                that._dialogClosed();
+                parent._modal = null;
+                if (typeof closeCallback === "function") {
+                    closeCallback.apply(undefined, arguments);
+                }
+            }
+        };
+    };
+    ViewCommon.prototype._hideNativeModalView = function (parent) {
+    };
+    ViewCommon.prototype._raiseLayoutChangedEvent = function () {
+        var args = {
+            eventName: ViewCommon.layoutChangedEvent,
+            object: this
+        };
+        this.notify(args);
+    };
+    ViewCommon.prototype._raiseShownModallyEvent = function () {
+        var args = {
+            eventName: ViewCommon.shownModallyEvent,
+            object: this,
+            context: this._modalContext,
+            closeCallback: this._closeModalCallback
+        };
+        this.notify(args);
+    };
+    ViewCommon.prototype._raiseShowingModallyEvent = function () {
+        var args = {
+            eventName: ViewCommon.showingModallyEvent,
+            object: this,
+            context: this._modalContext,
+            closeCallback: this._closeModalCallback
+        };
+        this.notify(args);
     };
     ViewCommon.prototype._isEvent = function (name) {
         return this.constructor && name + "Event" in this.constructor;
@@ -278,6 +435,16 @@ var ViewCommon = (function (_super) {
         },
         set: function (value) {
             this.style.color = value;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(ViewCommon.prototype, "background", {
+        get: function () {
+            return this.style.background;
+        },
+        set: function (value) {
+            this.style.background = value;
         },
         enumerable: true,
         configurable: true
@@ -496,6 +663,9 @@ var ViewCommon = (function (_super) {
             }
             return this._cssType;
         },
+        set: function (type) {
+            this._cssType = type.toLowerCase();
+        },
         enumerable: true,
         configurable: true
     });
@@ -532,6 +702,7 @@ var ViewCommon = (function (_super) {
     };
     ViewCommon.prototype.requestLayout = function () {
         this._isLayoutValid = false;
+        _super.prototype.requestLayout.call(this);
     };
     ViewCommon.resolveSizeAndState = function (size, specSize, specMode, childMeasuredState) {
         var result = size;
@@ -553,7 +724,8 @@ var ViewCommon = (function (_super) {
     ViewCommon.combineMeasuredStates = function (curState, newState) {
         return curState | newState;
     };
-    ViewCommon.layoutChild = function (parent, child, left, top, right, bottom) {
+    ViewCommon.layoutChild = function (parent, child, left, top, right, bottom, setFrame) {
+        if (setFrame === void 0) { setFrame = true; }
         if (!child || child.isCollapsed) {
             return;
         }
@@ -619,20 +791,26 @@ var ViewCommon = (function (_super) {
         if (view_base_1.traceEnabled()) {
             view_base_1.traceWrite(child.parent + " :layoutChild: " + child + " " + childLeft + ", " + childTop + ", " + childRight + ", " + childBottom, view_base_1.traceCategories.Layout);
         }
-        child.layout(childLeft, childTop, childRight, childBottom);
+        child.layout(childLeft, childTop, childRight, childBottom, setFrame);
     };
     ViewCommon.measureChild = function (parent, child, widthMeasureSpec, heightMeasureSpec) {
         var measureWidth = 0;
         var measureHeight = 0;
         if (child && !child.isCollapsed) {
-            child._updateEffectiveLayoutValues(parent);
+            var widthSpec = parent ? parent._currentWidthMeasureSpec : widthMeasureSpec;
+            var heightSpec = parent ? parent._currentHeightMeasureSpec : heightMeasureSpec;
+            var width = view_base_1.layout.getMeasureSpecSize(widthSpec);
+            var widthMode = view_base_1.layout.getMeasureSpecMode(widthSpec);
+            var height = view_base_1.layout.getMeasureSpecSize(heightSpec);
+            var heightMode = view_base_1.layout.getMeasureSpecMode(heightSpec);
+            child._updateEffectiveLayoutValues(width, widthMode, height, heightMode);
             var style = child.style;
             var horizontalMargins = child.effectiveMarginLeft + child.effectiveMarginRight;
             var verticalMargins = child.effectiveMarginTop + child.effectiveMarginBottom;
             var childWidthMeasureSpec = ViewCommon.getMeasureSpec(widthMeasureSpec, horizontalMargins, child.effectiveWidth, style.horizontalAlignment === "stretch");
             var childHeightMeasureSpec = ViewCommon.getMeasureSpec(heightMeasureSpec, verticalMargins, child.effectiveHeight, style.verticalAlignment === "stretch");
             if (view_base_1.traceEnabled()) {
-                view_base_1.traceWrite(child.parent + " :measureChild: " + child + " " + view_base_1.layout.measureSpecToString(childWidthMeasureSpec) + ", " + view_base_1.layout.measureSpecToString(childHeightMeasureSpec), view_base_1.traceCategories.Layout);
+                view_base_1.traceWrite(child.parent + " :measureChild: " + child + " " + view_base_1.layout.measureSpecToString(childWidthMeasureSpec) + ", " + view_base_1.layout.measureSpecToString(childHeightMeasureSpec) + "}", view_base_1.traceCategories.Layout);
             }
             child.measure(childWidthMeasureSpec, childHeightMeasureSpec);
             measureWidth = Math.round(child.getMeasuredWidth() + horizontalMargins);
@@ -697,8 +875,6 @@ var ViewCommon = (function (_super) {
     ViewCommon.prototype._eachLayoutView = function (callback) {
         return callback(this);
     };
-    ViewCommon.prototype._updateLayout = function () {
-    };
     ViewCommon.prototype.focus = function () {
         return undefined;
     };
@@ -726,50 +902,71 @@ var ViewCommon = (function (_super) {
     };
     ViewCommon.prototype.createAnimation = function (animation) {
         ensureAnimationModule();
+        if (!this._localAnimations) {
+            this._localAnimations = new Set();
+        }
         animation.target = this;
-        return new animationModule.Animation([animation]);
+        var anim = new animationModule.Animation([animation]);
+        this._localAnimations.add(anim);
+        return anim;
     };
-    ViewCommon.prototype.toString = function () {
-        var str = this.typeName;
-        if (this.id) {
-            str += "<" + this.id + ">";
+    ViewCommon.prototype._removeAnimation = function (animation) {
+        var localAnimations = this._localAnimations;
+        if (localAnimations && localAnimations.has(animation)) {
+            localAnimations.delete(animation);
+            if (animation.isPlaying) {
+                animation.cancel();
+            }
+            return true;
         }
-        else {
-            str += "(" + this._domId + ")";
+        return false;
+    };
+    ViewCommon.prototype.resetNativeView = function () {
+        var _this = this;
+        if (this._localAnimations) {
+            this._localAnimations.forEach(function (a) { return _this._removeAnimation(a); });
         }
-        var source = debug_1.Source.get(this);
-        if (source) {
-            str += "@" + source + ";";
-        }
-        return str;
+        _super.prototype.resetNativeView.call(this);
     };
     ViewCommon.prototype._setNativeViewFrame = function (nativeView, frame) {
     };
     ViewCommon.prototype._getValue = function () {
-        throw new Error("The View._setValue is obsolete. There is a new property system.");
+        throw new Error("The View._getValue is obsolete. There is a new property system.");
     };
     ViewCommon.prototype._setValue = function () {
         throw new Error("The View._setValue is obsolete. There is a new property system.");
     };
-    ViewCommon.prototype._updateEffectiveLayoutValues = function (parent) {
+    ViewCommon.prototype._updateEffectiveLayoutValues = function (parentWidthMeasureSize, parentWidthMeasureMode, parentHeightMeasureSize, parentHeightMeasureMode) {
         var style = this.style;
-        var parentWidthMeasureSpec = parent._currentWidthMeasureSpec;
-        var parentWidthMeasureSize = view_base_1.layout.getMeasureSpecSize(parentWidthMeasureSpec);
-        var parentWidthMeasureMode = view_base_1.layout.getMeasureSpecMode(parentWidthMeasureSpec);
-        var parentAvailableWidth = parentWidthMeasureMode === view_base_1.layout.UNSPECIFIED ? -1 : parentWidthMeasureSize;
-        this.effectiveWidth = style_properties_1.PercentLength.toDevicePixels(style.width, -2, parentAvailableWidth);
-        this.effectiveMarginLeft = style_properties_1.PercentLength.toDevicePixels(style.marginLeft, 0, parentAvailableWidth);
-        this.effectiveMarginRight = style_properties_1.PercentLength.toDevicePixels(style.marginRight, 0, parentAvailableWidth);
-        var parentHeightMeasureSpec = parent._currentHeightMeasureSpec;
-        var parentHeightMeasureSize = view_base_1.layout.getMeasureSpecSize(parentHeightMeasureSpec);
-        var parentHeightMeasureMode = view_base_1.layout.getMeasureSpecMode(parentHeightMeasureSpec);
-        var parentAvailableHeight = parentHeightMeasureMode === view_base_1.layout.UNSPECIFIED ? -1 : parentHeightMeasureSize;
-        this.effectiveHeight = style_properties_1.PercentLength.toDevicePixels(style.height, -2, parentAvailableHeight);
-        this.effectiveMarginTop = style_properties_1.PercentLength.toDevicePixels(style.marginTop, 0, parentAvailableHeight);
-        this.effectiveMarginBottom = style_properties_1.PercentLength.toDevicePixels(style.marginBottom, 0, parentAvailableHeight);
+        var availableWidth = parentWidthMeasureMode === view_base_1.layout.UNSPECIFIED ? -1 : parentWidthMeasureSize;
+        this.effectiveWidth = style_properties_1.PercentLength.toDevicePixels(style.width, -2, availableWidth);
+        this.effectiveMarginLeft = style_properties_1.PercentLength.toDevicePixels(style.marginLeft, 0, availableWidth);
+        this.effectiveMarginRight = style_properties_1.PercentLength.toDevicePixels(style.marginRight, 0, availableWidth);
+        var availableHeight = parentHeightMeasureMode === view_base_1.layout.UNSPECIFIED ? -1 : parentHeightMeasureSize;
+        this.effectiveHeight = style_properties_1.PercentLength.toDevicePixels(style.height, -2, availableHeight);
+        this.effectiveMarginTop = style_properties_1.PercentLength.toDevicePixels(style.marginTop, 0, availableHeight);
+        this.effectiveMarginBottom = style_properties_1.PercentLength.toDevicePixels(style.marginBottom, 0, availableHeight);
     };
     ViewCommon.prototype._setNativeClipToBounds = function () {
     };
+    ViewCommon.prototype._redrawNativeBackground = function (value) {
+    };
+    ViewCommon.prototype._onAttachedToWindow = function () {
+    };
+    ViewCommon.prototype._onDetachedFromWindow = function () {
+    };
+    ViewCommon.prototype._hasAncestorView = function (ancestorView) {
+        var matcher = function (view) { return view === ancestorView; };
+        for (var parent_2 = this.parent; parent_2 != null; parent_2 = parent_2.parent) {
+            if (matcher(parent_2)) {
+                return true;
+            }
+        }
+        return false;
+    };
+    ViewCommon.layoutChangedEvent = "layoutChanged";
+    ViewCommon.shownModallyEvent = "shownModally";
+    ViewCommon.showingModallyEvent = "showingModally";
     return ViewCommon;
 }(view_base_1.ViewBase));
 exports.ViewCommon = ViewCommon;

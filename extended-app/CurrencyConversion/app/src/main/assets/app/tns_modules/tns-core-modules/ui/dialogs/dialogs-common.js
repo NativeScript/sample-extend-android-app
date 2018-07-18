@@ -24,63 +24,59 @@ function getCurrentPage() {
     return undefined;
 }
 exports.getCurrentPage = getCurrentPage;
-function applySelectors(view) {
+function applySelectors(view, callback) {
     var currentPage = getCurrentPage();
     if (currentPage) {
-        var styleScope = currentPage._getStyleScope();
+        var styleScope = currentPage._styleScope;
         if (styleScope) {
-            styleScope.applySelectors(view);
+            view._inheritStyleScope(styleScope);
+            view.onLoaded();
+            callback(view);
+            view.onUnloaded();
         }
     }
 }
-var buttonColor;
-var buttonBackgroundColor;
+var button;
+var label;
+var textField;
 function getButtonColors() {
-    var Button = require("ui/button").Button;
-    var btn = new Button();
-    applySelectors(btn);
-    buttonColor = btn.color;
-    buttonBackgroundColor = btn.backgroundColor;
-    btn.onUnloaded();
-}
-function getButtonColor() {
-    if (!buttonColor) {
-        getButtonColors();
+    if (!button) {
+        var Button = require("ui/button").Button;
+        button = new Button;
     }
-    return buttonColor;
+    var buttonColor;
+    var buttonBackgroundColor;
+    applySelectors(button, function (btn) {
+        buttonColor = btn.color;
+        buttonBackgroundColor = btn.backgroundColor;
+    });
+    return { color: buttonColor, backgroundColor: buttonBackgroundColor };
 }
-exports.getButtonColor = getButtonColor;
-function getButtonBackgroundColor() {
-    if (!buttonBackgroundColor) {
-        getButtonColors();
-    }
-    return buttonBackgroundColor;
-}
-exports.getButtonBackgroundColor = getButtonBackgroundColor;
-var textFieldColor;
-function getTextFieldColor() {
-    if (!textFieldColor) {
-        var TextField = require("ui/text-field").TextField;
-        var tf = new TextField();
-        applySelectors(tf);
-        textFieldColor = tf.color;
-        tf.onUnloaded();
-    }
-    return textFieldColor;
-}
-exports.getTextFieldColor = getTextFieldColor;
-var labelColor;
+exports.getButtonColors = getButtonColors;
 function getLabelColor() {
-    if (!labelColor) {
+    if (!label) {
         var Label = require("ui/label").Label;
-        var lbl = new Label();
-        applySelectors(lbl);
-        labelColor = lbl.color;
-        lbl.onUnloaded();
+        label = new Label;
     }
+    var labelColor;
+    applySelectors(label, function (lbl) {
+        labelColor = lbl.color;
+    });
     return labelColor;
 }
 exports.getLabelColor = getLabelColor;
+function getTextFieldColor() {
+    if (!textField) {
+        var TextField = require("ui/text-field").TextField;
+        textField = new TextField();
+    }
+    var textFieldColor;
+    applySelectors(textField, function (tf) {
+        textFieldColor = tf.color;
+    });
+    return textFieldColor;
+}
+exports.getTextFieldColor = getTextFieldColor;
 function isDialogOptions(arg) {
     return arg && (arg.message || arg.title);
 }

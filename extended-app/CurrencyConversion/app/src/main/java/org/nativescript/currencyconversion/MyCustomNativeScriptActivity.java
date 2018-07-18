@@ -12,6 +12,7 @@ public class MyCustomNativeScriptActivity extends android.app.Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         com.tns.Runtime.callJSMethod(this, "onCreate", void.class, new Object[]{savedInstanceState});
     }
 
@@ -22,22 +23,25 @@ public class MyCustomNativeScriptActivity extends android.app.Activity {
 
     @Override
     protected void onStart() {
-        com.tns.Runtime.callJSMethod(this, "onStart", void.class, null);
+        super.onStart();
+        com.tns.Runtime.callJSMethod(this, "onStart", void.class);
     }
 
     @Override
     protected void onStop() {
-        com.tns.Runtime.callJSMethod(this, "onStop", void.class, null);
+        super.onStop();
+        com.tns.Runtime.callJSMethod(this, "onStop", void.class);
     }
 
     @Override
     protected void onDestroy() {
-        com.tns.Runtime.callJSMethod(this, "onDestroy", void.class, null);
+        super.onDestroy();
+        com.tns.Runtime.callJSMethod(this, "onDestroy", void.class);
     }
 
     @Override
     public void onBackPressed() {
-        com.tns.Runtime.callJSMethod(this, "onBackPressed", void.class, null);
+        com.tns.Runtime.callJSMethod(this, "onBackPressed", void.class);
     }
 
     @Override

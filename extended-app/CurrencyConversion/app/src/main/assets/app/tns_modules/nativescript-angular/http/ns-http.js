@@ -1,10 +1,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = require("@angular/core");
 var http_1 = require("@angular/http");
-var Observable_1 = require("rxjs/Observable");
-require("rxjs/add/observable/fromPromise");
+var http_utils_1 = require("../http-client/http-utils");
 var ns_file_system_1 = require("../file-system/ns-file-system");
-var NSXSRFStrategy = (function () {
+var NSXSRFStrategy = /** @class */ (function () {
     function NSXSRFStrategy() {
     }
     NSXSRFStrategy.prototype.configureRequest = function (_req) {
@@ -13,7 +12,7 @@ var NSXSRFStrategy = (function () {
     return NSXSRFStrategy;
 }());
 exports.NSXSRFStrategy = NSXSRFStrategy;
-var NSHttp = (function (_super) {
+var NSHttp = /** @class */ (function (_super) {
     __extends(NSHttp, _super);
     function NSHttp(backend, defaultOptions, nsFileSystem) {
         var _this = _super.call(this, backend, defaultOptions) || this;
@@ -21,42 +20,44 @@ var NSHttp = (function (_super) {
         return _this;
     }
     /**
+     * Performs a request with `request` http method.
+     */
+    NSHttp.prototype.request = function (req, options) {
+        var urlString = typeof req === "string" ? req : req.url;
+        if (http_utils_1.isLocalRequest(urlString)) {
+            return this.requestLocalFile(urlString);
+        }
+        else {
+            return _super.prototype.request.call(this, req, options);
+        }
+    };
+    /**
      * Performs a request with `get` http method.
-     * Uses a local file if `~/` resource is requested.
      */
     NSHttp.prototype.get = function (url, options) {
-        var _this = this;
-        if (url.indexOf("~") === 0 || url.indexOf("/") === 0) {
-            // normalize url
-            url = url.replace("~", "").replace("/", "");
-            // request from local app resources
-            return Observable_1.Observable.fromPromise(new Promise(function (resolve, reject) {
-                var app = _this.nsFileSystem.currentApp();
-                var localFile = app.getFile(url);
-                if (localFile) {
-                    localFile.readText().then(function (data) {
-                        resolve(responseOptions(data, 200, url));
-                    }, function (err) {
-                        reject(responseOptions(err, 400, url));
-                    });
-                }
-                else {
-                    reject(responseOptions("Not Found", 404, url));
-                }
-            }));
+        if (http_utils_1.isLocalRequest(url)) {
+            return this.requestLocalFile(url);
         }
         else {
             return _super.prototype.get.call(this, url, options);
         }
     };
+    NSHttp.prototype.requestLocalFile = function (url) {
+        return http_utils_1.processLocalFileRequest(url, this.nsFileSystem, createResponse, createResponse);
+    };
+    NSHttp.decorators = [
+        { type: core_1.Injectable },
+    ];
+    /** @nocollapse */
+    NSHttp.ctorParameters = function () { return [
+        { type: http_1.ConnectionBackend },
+        { type: http_1.RequestOptions },
+        { type: ns_file_system_1.NSFileSystem }
+    ]; };
     return NSHttp;
 }(http_1.Http));
-NSHttp = __decorate([
-    core_1.Injectable(),
-    __metadata("design:paramtypes", [http_1.ConnectionBackend, http_1.RequestOptions, ns_file_system_1.NSFileSystem])
-], NSHttp);
 exports.NSHttp = NSHttp;
-function responseOptions(body, status, url) {
+function createResponse(url, body, status) {
     return new http_1.Response(new http_1.ResponseOptions({
         body: body,
         status: status,

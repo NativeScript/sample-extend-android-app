@@ -2,34 +2,38 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = require("@angular/core");
 var platform_1 = require("tns-core-modules/platform");
 var platform_providers_1 = require("../platform-providers");
-var AndroidFilterComponent = (function () {
+var AndroidFilterComponent = /** @class */ (function () {
     function AndroidFilterComponent(device) {
         this.show = (device.os === platform_1.platformNames.android);
     }
+    AndroidFilterComponent.decorators = [
+        { type: core_1.Component, args: [{
+                    selector: "android",
+                    template: "<ng-content *ngIf=\"show\"></ng-content>",
+                },] },
+    ];
+    /** @nocollapse */
+    AndroidFilterComponent.ctorParameters = function () { return [
+        { type: undefined, decorators: [{ type: core_1.Inject, args: [platform_providers_1.DEVICE,] }] }
+    ]; };
     return AndroidFilterComponent;
 }());
-AndroidFilterComponent = __decorate([
-    core_1.Component({
-        selector: "android",
-        template: "<ng-content *ngIf=\"show\"></ng-content>",
-    }),
-    __param(0, core_1.Inject(platform_providers_1.DEVICE)),
-    __metadata("design:paramtypes", [Object])
-], AndroidFilterComponent);
 exports.AndroidFilterComponent = AndroidFilterComponent;
-var IosFilterComponent = (function () {
+var IosFilterComponent = /** @class */ (function () {
     function IosFilterComponent(device) {
         this.show = (device.os === platform_1.platformNames.ios);
     }
+    IosFilterComponent.decorators = [
+        { type: core_1.Component, args: [{
+                    selector: "ios",
+                    template: "<ng-content *ngIf=\"show\"></ng-content>",
+                },] },
+    ];
+    /** @nocollapse */
+    IosFilterComponent.ctorParameters = function () { return [
+        { type: undefined, decorators: [{ type: core_1.Inject, args: [platform_providers_1.DEVICE,] }] }
+    ]; };
     return IosFilterComponent;
 }());
-IosFilterComponent = __decorate([
-    core_1.Component({
-        selector: "ios",
-        template: "<ng-content *ngIf=\"show\"></ng-content>",
-    }),
-    __param(0, core_1.Inject(platform_providers_1.DEVICE)),
-    __metadata("design:paramtypes", [Object])
-], IosFilterComponent);
 exports.IosFilterComponent = IosFilterComponent;
 //# sourceMappingURL=platform-filters.js.map

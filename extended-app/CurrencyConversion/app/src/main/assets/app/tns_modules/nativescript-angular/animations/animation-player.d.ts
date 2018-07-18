@@ -1,8 +1,10 @@
 import { AnimationPlayer } from "@angular/animations";
-import { NgView } from "../element-registry";
 import { Keyframe } from "./utils";
+import { NgView } from "../element-registry";
 export declare class NativeScriptAnimationPlayer implements AnimationPlayer {
     private target;
+    private duration;
+    private delay;
     parentPlayer: AnimationPlayer;
     private _startSubscriptions;
     private _doneSubscriptions;
@@ -10,6 +12,7 @@ export declare class NativeScriptAnimationPlayer implements AnimationPlayer {
     private _started;
     private animation;
     constructor(target: NgView, keyframes: Keyframe[], duration: number, delay: number, easing: string);
+    readonly totalTime: number;
     init(): void;
     hasStarted(): boolean;
     onStart(fn: Function): void;

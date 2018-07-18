@@ -1,20 +1,19 @@
 Object.defineProperty(exports, "__esModule", { value: true });
-var lang_facade_1 = require("../lang-facade");
-function convertToInt(value) {
-    var normalizedValue;
-    if (lang_facade_1.isBlank(value)) {
-        normalizedValue = 0;
+function throwIfAlreadyLoaded(parentModule, moduleName) {
+    if (parentModule) {
+        throw new Error(moduleName + " has already been loaded. Import " + moduleName + " in the AppModule only.");
     }
-    else {
-        if (lang_facade_1.isNumber(value)) {
-            normalizedValue = value;
-        }
-        else {
-            var parsedValue = parseInt(value.toString(), 10);
-            normalizedValue = isNaN(parsedValue) ? 0 : parsedValue;
-        }
-    }
-    return Math.round(normalizedValue);
 }
-exports.convertToInt = convertToInt;
+exports.throwIfAlreadyLoaded = throwIfAlreadyLoaded;
+function once(fn) {
+    var wasCalled = false;
+    return function wrapper() {
+        if (wasCalled) {
+            return;
+        }
+        wasCalled = true;
+        fn.apply(null, arguments);
+    };
+}
+exports.once = once;
 //# sourceMappingURL=utils.js.map

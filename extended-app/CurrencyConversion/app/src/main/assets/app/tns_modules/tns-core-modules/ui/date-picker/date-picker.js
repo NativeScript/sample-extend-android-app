@@ -23,7 +23,7 @@ function initializeDateChangedListener() {
                 date_picker_common_1.yearProperty.nativeValueChange(owner, year);
                 dateChanged = true;
             }
-            if ((month + 1) !== owner.month) {
+            if (month !== (owner.month - 1)) {
                 date_picker_common_1.monthProperty.nativeValueChange(owner, month + 1);
                 dateChanged = true;
             }
@@ -35,11 +35,11 @@ function initializeDateChangedListener() {
                 date_picker_common_1.dateProperty.nativeValueChange(owner, new Date(year, month, day));
             }
         };
+        DateChangedListenerImpl = __decorate([
+            Interfaces([android.widget.DatePicker.OnDateChangedListener])
+        ], DateChangedListenerImpl);
         return DateChangedListenerImpl;
     }(java.lang.Object));
-    DateChangedListenerImpl = __decorate([
-        Interfaces([android.widget.DatePicker.OnDateChangedListener])
-    ], DateChangedListenerImpl);
     DateChangedListener = DateChangedListenerImpl;
 }
 var DatePicker = (function (_super) {
@@ -52,74 +52,61 @@ var DatePicker = (function (_super) {
         var picker = new android.widget.DatePicker(this._context);
         picker.setCalendarViewShown(false);
         var listener = new DateChangedListener(this);
-        picker.init(0, 0, 0, listener);
+        picker.init(this.year, this.month - 1, this.day, listener);
         picker.listener = listener;
         return picker;
     };
     DatePicker.prototype.initNativeView = function () {
         _super.prototype.initNativeView.call(this);
-        this.nativeView.listener.owner = this;
+        this.nativeViewProtected.listener.owner = this;
     };
     DatePicker.prototype.disposeNativeView = function () {
-        this.nativeView.listener.owner = null;
+        this.nativeViewProtected.listener.owner = null;
         _super.prototype.disposeNativeView.call(this);
     };
     DatePicker.prototype.updateNativeDate = function () {
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         var year = typeof this.year === "number" ? this.year : nativeView.getYear();
-        var month = typeof this.month === "number" ? (this.month - 1) : nativeView.getMonth();
+        var month = typeof this.month === "number" ? this.month - 1 : nativeView.getMonth();
         var day = typeof this.day === "number" ? this.day : nativeView.getDayOfMonth();
         this.date = new Date(year, month, day);
     };
-    DatePicker.prototype[date_picker_common_1.yearProperty.getDefault] = function () {
-        return this.nativeView.getYear();
-    };
     DatePicker.prototype[date_picker_common_1.yearProperty.setNative] = function (value) {
-        if (this.nativeView.getYear() !== value) {
+        if (this.nativeViewProtected.getYear() !== value) {
             this.updateNativeDate();
         }
-    };
-    DatePicker.prototype[date_picker_common_1.monthProperty.getDefault] = function () {
-        return this.nativeView.getMonth();
     };
     DatePicker.prototype[date_picker_common_1.monthProperty.setNative] = function (value) {
-        if (this.nativeView.getMonth() !== (value - 1)) {
+        if (this.nativeViewProtected.getMonth() !== (value - 1)) {
             this.updateNativeDate();
         }
-    };
-    DatePicker.prototype[date_picker_common_1.dayProperty.getDefault] = function () {
-        return this.nativeView.getDayOfMonth();
     };
     DatePicker.prototype[date_picker_common_1.dayProperty.setNative] = function (value) {
-        if (this.nativeView.getDayOfMonth() !== value) {
+        if (this.nativeViewProtected.getDayOfMonth() !== value) {
             this.updateNativeDate();
         }
     };
-    DatePicker.prototype[date_picker_common_1.dateProperty.getDefault] = function () {
-        var nativeView = this.nativeView;
-        return new Date(nativeView.getYear(), nativeView.getMonth(), nativeView.getDayOfMonth());
-    };
     DatePicker.prototype[date_picker_common_1.dateProperty.setNative] = function (value) {
-        var nativeView = this.nativeView;
-        if (nativeView.getDayOfMonth() !== value.getDay()
+        var nativeView = this.nativeViewProtected;
+        if (nativeView.getDayOfMonth() !== value.getDate()
             || nativeView.getMonth() !== value.getMonth()
             || nativeView.getYear() !== value.getFullYear()) {
             nativeView.updateDate(value.getFullYear(), value.getMonth(), value.getDate());
         }
     };
     DatePicker.prototype[date_picker_common_1.maxDateProperty.getDefault] = function () {
-        return this.nativeView.getMaxDate();
+        return this.nativeViewProtected.getMaxDate();
     };
     DatePicker.prototype[date_picker_common_1.maxDateProperty.setNative] = function (value) {
         var newValue = value instanceof Date ? value.getTime() : value;
-        this.nativeView.setMaxDate(newValue);
+        this.nativeViewProtected.setMaxDate(newValue);
     };
     DatePicker.prototype[date_picker_common_1.minDateProperty.getDefault] = function () {
-        return this.nativeView.getMinDate();
+        return this.nativeViewProtected.getMinDate();
     };
     DatePicker.prototype[date_picker_common_1.minDateProperty.setNative] = function (value) {
         var newValue = value instanceof Date ? value.getTime() : value;
-        this.nativeView.setMinDate(newValue);
+        this.nativeViewProtected.setMinDate(newValue);
     };
     return DatePicker;
 }(date_picker_common_1.DatePickerBase));

@@ -2,10 +2,12 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
+var linear_gradient_1 = require("./linear-gradient");
 var utils_1 = require("../../utils/utils");
 var css_value_1 = require("../../css-value");
 var file_system_1 = require("../../file-system");
-var application_1 = require("../../application");
+var application = require("../../application");
+var profiling_1 = require("../../profiling");
 __export(require("./background-common"));
 var ad;
 (function (ad) {
@@ -22,16 +24,16 @@ var ad;
                 && getSDK() >= 21));
     }
     function onBackgroundOrBorderPropertyChanged(view) {
-        var nativeView = view.nativeView;
+        var nativeView = view.nativeViewProtected;
         if (!nativeView) {
             return;
         }
         var background = view.style.backgroundInternal;
-        var cache = view.nativeView;
         var drawable = nativeView.getBackground();
         var androidView = view;
-        if (androidView.background === undefined && drawable) {
-            androidView.background = drawable.getConstantState();
+        if (androidView._cachedDrawable === undefined && drawable) {
+            var constantState = drawable.getConstantState();
+            androidView._cachedDrawable = constantState || drawable;
         }
         if (isSetColorFilterOnlyWidget(nativeView)
             && drawable
@@ -56,21 +58,21 @@ var ad;
             else {
                 refreshBorderDrawable(view, backgroundDrawable);
             }
-            if ((background.hasBorderWidth() || background.hasBorderRadius() || background.clipPath) && getSDK() < 18) {
-                if (cache.layerType === undefined) {
-                    cache.layerType = cache.getLayerType();
-                    cache.setLayerType(android.view.View.LAYER_TYPE_SOFTWARE, null);
-                }
-            }
         }
         else {
-            var defaultDrawable = androidView.background ? androidView.background.newDrawable() : null;
-            org.nativescript.widgets.ViewHelper.setBackground(nativeView, defaultDrawable);
-            androidView.background = undefined;
-            if (cache.layerType !== undefined) {
-                cache.setLayerType(cache.layerType, null);
-                cache.layerType = undefined;
+            var cachedDrawable = androidView._cachedDrawable;
+            var defaultDrawable = void 0;
+            if (cachedDrawable instanceof android.graphics.drawable.Drawable.ConstantState) {
+                defaultDrawable = cachedDrawable.newDrawable(nativeView.getResources());
             }
+            else if (cachedDrawable instanceof android.graphics.drawable.Drawable) {
+                defaultDrawable = cachedDrawable;
+            }
+            else {
+                defaultDrawable = null;
+            }
+            org.nativescript.widgets.ViewHelper.setBackground(nativeView, defaultDrawable);
+            androidView._cachedDrawable = undefined;
         }
         var leftPadding = Math.ceil(view.effectiveBorderLeftWidth + view.effectivePaddingLeft);
         var topPadding = Math.ceil(view.effectiveBorderTopWidth + view.effectivePaddingTop);
@@ -84,17 +86,36 @@ function fromBase64(source) {
     var bytes = android.util.Base64.decode(source, android.util.Base64.DEFAULT);
     return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
 }
+function fromGradient(gradient) {
+    var colors = Array.create("int", gradient.colorStops.length);
+    var stops = Array.create("float", gradient.colorStops.length);
+    var hasStops = false;
+    gradient.colorStops.forEach(function (stop, index) {
+        colors[index] = stop.color.android;
+        if (stop.offset) {
+            stops[index] = stop.offset.value;
+            hasStops = true;
+        }
+    });
+    var alpha = gradient.angle / (Math.PI * 2);
+    var startX = Math.pow(Math.sin(Math.PI * (alpha + 0.75)), 2);
+    var startY = Math.pow(Math.sin(Math.PI * (alpha + 0.5)), 2);
+    var endX = Math.pow(Math.sin(Math.PI * (alpha + 0.25)), 2);
+    var endY = Math.pow(Math.sin(Math.PI * alpha), 2);
+    return new org.nativescript.widgets.LinearGradientDefinition(startX, startY, endX, endY, colors, hasStops ? stops : null);
+}
 var pattern = /url\(('|")(.*?)\1\)/;
 function refreshBorderDrawable(view, borderDrawable) {
-    var nativeView = view.nativeView;
+    var nativeView = view.nativeViewProtected;
     var context = nativeView.getContext();
     var background = view.style.backgroundInternal;
     if (background) {
         var backgroundPositionParsedCSSValues = createNativeCSSValueArray(background.position);
         var backgroundSizeParsedCSSValues = createNativeCSSValueArray(background.size);
         var blackColor = -16777216;
-        var imageUri = background.image;
-        if (imageUri) {
+        var imageUri = void 0;
+        if (background.image && typeof background.image === "string") {
+            imageUri = background.image;
             var match = imageUri.match(pattern);
             if (match && match[2]) {
                 imageUri = match[2];
@@ -117,7 +138,11 @@ function refreshBorderDrawable(view, borderDrawable) {
                 imageUri = utils_1.FILE_PREFIX + fileName;
             }
         }
-        borderDrawable.refresh(background.borderTopColor ? background.borderTopColor.android : blackColor, background.borderRightColor ? background.borderRightColor.android : blackColor, background.borderBottomColor ? background.borderBottomColor.android : blackColor, background.borderLeftColor ? background.borderLeftColor.android : blackColor, background.borderTopWidth, background.borderRightWidth, background.borderBottomWidth, background.borderLeftWidth, background.borderTopLeftRadius, background.borderTopRightRadius, background.borderBottomRightRadius, background.borderBottomLeftRadius, background.clipPath, background.color ? background.color.android : 0, imageUri, bitmap, context, background.repeat, background.position, backgroundPositionParsedCSSValues, background.size, backgroundSizeParsedCSSValues);
+        var gradient = null;
+        if (background.image && background.image instanceof linear_gradient_1.LinearGradient) {
+            gradient = fromGradient(background.image);
+        }
+        borderDrawable.refresh(background.borderTopColor ? background.borderTopColor.android : blackColor, background.borderRightColor ? background.borderRightColor.android : blackColor, background.borderBottomColor ? background.borderBottomColor.android : blackColor, background.borderLeftColor ? background.borderLeftColor.android : blackColor, background.borderTopWidth, background.borderRightWidth, background.borderBottomWidth, background.borderLeftWidth, background.borderTopLeftRadius, background.borderTopRightRadius, background.borderBottomRightRadius, background.borderBottomLeftRadius, background.clipPath, background.color ? background.color.android : 0, imageUri, bitmap, gradient, context, background.repeat, background.position, backgroundPositionParsedCSSValues, background.size, backgroundSizeParsedCSSValues);
     }
 }
 function createNativeCSSValueArray(css) {
@@ -163,17 +188,23 @@ function initImageCache(context, mode, memoryCacheSize, diskCacheSize) {
     imageFetcher.initCache();
 }
 exports.initImageCache = initImageCache;
-application_1.android.on("activityStarted", function (args) {
+function onLivesync(args) {
+    if (imageFetcher) {
+        imageFetcher.clearCache();
+    }
+}
+application.on("livesync", onLivesync);
+application.android.on("activityStarted", profiling_1.profile("initImageCache", function (args) {
     if (!imageFetcher) {
         initImageCache(args.activity);
     }
     else {
         imageFetcher.initCache();
     }
-});
-application_1.android.on("activityStopped", function (args) {
+}));
+application.android.on("activityStopped", profiling_1.profile("closeImageCache", function (args) {
     if (imageFetcher) {
         imageFetcher.closeCache();
     }
-});
+}));
 //# sourceMappingURL=background.js.map

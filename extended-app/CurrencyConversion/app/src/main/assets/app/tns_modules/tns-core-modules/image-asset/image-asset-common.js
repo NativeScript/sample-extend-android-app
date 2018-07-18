@@ -4,7 +4,9 @@ var platform = require("../platform");
 var ImageAsset = (function (_super) {
     __extends(ImageAsset, _super);
     function ImageAsset() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        var _this = _super.call(this) || this;
+        _this._options = { keepAspectRatio: true };
+        return _this;
     }
     Object.defineProperty(ImageAsset.prototype, "options", {
         get: function () {
@@ -12,26 +14,6 @@ var ImageAsset = (function (_super) {
         },
         set: function (value) {
             this._options = value;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(ImageAsset.prototype, "ios", {
-        get: function () {
-            return this._ios;
-        },
-        set: function (value) {
-            this._ios = value;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(ImageAsset.prototype, "android", {
-        get: function () {
-            return this._android;
-        },
-        set: function (value) {
-            this._android = value;
         },
         enumerable: true,
         configurable: true
@@ -54,7 +36,7 @@ exports.ImageAsset = ImageAsset;
 function getAspectSafeDimensions(sourceWidth, sourceHeight, reqWidth, reqHeight) {
     var widthCoef = sourceWidth / reqWidth;
     var heightCoef = sourceHeight / reqHeight;
-    var aspectCoef = widthCoef > heightCoef ? widthCoef : heightCoef;
+    var aspectCoef = Math.min(widthCoef, heightCoef);
     return {
         width: Math.floor(sourceWidth / aspectCoef),
         height: Math.floor(sourceHeight / aspectCoef)
@@ -62,14 +44,9 @@ function getAspectSafeDimensions(sourceWidth, sourceHeight, reqWidth, reqHeight)
 }
 exports.getAspectSafeDimensions = getAspectSafeDimensions;
 function getRequestedImageSize(src, options) {
-    var reqWidth = platform.screen.mainScreen.widthDIPs;
-    var reqHeight = platform.screen.mainScreen.heightDIPs;
-    if (options && options.width) {
-        reqWidth = (options.width > 0 && options.width < reqWidth) ? options.width : reqWidth;
-    }
-    if (options && options.height) {
-        reqHeight = (options.height > 0 && options.height < reqHeight) ? options.height : reqHeight;
-    }
+    var screen = platform.screen.mainScreen;
+    var reqWidth = options.width || Math.min(src.width, screen.widthPixels);
+    var reqHeight = options.height || Math.min(src.height, screen.heightPixels);
     if (options && options.keepAspectRatio) {
         var safeAspectSize = getAspectSafeDimensions(src.width, src.height, reqWidth, reqHeight);
         reqWidth = safeAspectSize.width;

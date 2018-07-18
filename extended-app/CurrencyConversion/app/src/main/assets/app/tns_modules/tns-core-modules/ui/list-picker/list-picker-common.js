@@ -17,9 +17,13 @@ var ListPickerBase = (function (_super) {
         var item = this.isItemsSource ? this.items.getItem(index) : this.items[index];
         return (item === undefined || item === null) ? index + "" : item + "";
     };
+    ListPickerBase = __decorate([
+        view_1.CSSType("ListPicker")
+    ], ListPickerBase);
     return ListPickerBase;
 }(view_1.View));
 exports.ListPickerBase = ListPickerBase;
+ListPickerBase.prototype.recycleNativeView = "auto";
 exports.selectedIndexProperty = new view_1.CoercibleProperty({
     name: "selectedIndex", defaultValue: -1,
     valueConverter: function (v) { return parseInt(v); },

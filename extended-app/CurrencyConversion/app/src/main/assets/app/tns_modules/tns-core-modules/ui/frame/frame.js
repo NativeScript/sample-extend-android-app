@@ -2,65 +2,75 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
+var application = require("../../application");
 var frame_common_1 = require("./frame-common");
-var constants_1 = require("../page/constants");
-var transitionModule = require("../transition");
+var fragment_transitions_1 = require("./fragment.transitions");
+var profiling_1 = require("../../profiling");
+var builder_1 = require("../builder");
+var platform_1 = require("../../platform");
+var lazy_1 = require("../../utils/lazy");
 __export(require("./frame-common"));
-var HIDDEN = "_hidden";
 var INTENT_EXTRA = "com.tns.activity";
+var ROOT_VIEW_ID_EXTRA = "com.tns.activity.rootViewId";
 var FRAMEID = "_frameId";
 var CALLBACKS = "_callbacks";
+var ownerSymbol = Symbol("_owner");
+var activityRootViewsMap = new Map();
+var sdkVersion = lazy_1.default(function () { return parseInt(platform_1.device.sdkVersion); });
 var navDepth = -1;
 var fragmentId = -1;
-var activityInitialized = false;
-function onFragmentShown(fragment) {
-    if (frame_common_1.traceEnabled()) {
-        frame_common_1.traceWrite("SHOWN " + fragment, frame_common_1.traceCategories.NativeLifecycle);
-    }
-    var callbacks = fragment[CALLBACKS];
-    if (callbacks.clearHistory) {
-        if (frame_common_1.traceEnabled()) {
-            frame_common_1.traceWrite(fragment + " has been shown, but it is being cleared from history. Returning.", frame_common_1.traceCategories.NativeLifecycle);
-        }
-        return null;
-    }
-    var frame = callbacks.frame;
-    var entry = callbacks.entry;
-    var page = entry.resolvedPage;
-    page._fragmentTag = entry.fragmentTag;
-    var currentNavigationContext;
-    var navigationQueue = frame._navigationQueue;
-    for (var i = 0; i < navigationQueue.length; i++) {
-        if (navigationQueue[i].entry === entry) {
-            currentNavigationContext = navigationQueue[i];
-            break;
-        }
-    }
-    var isBack = currentNavigationContext ? currentNavigationContext.isBackNavigation : false;
-    if (page.parent !== frame) {
-        frame._addView(page);
-    }
-    if (!frame.isLoaded) {
-        frame._currentEntry = entry;
-        frame.onLoaded();
-    }
-    transitionModule._onFragmentShown(fragment, isBack);
+if (global && global.__inspector) {
+    var devtools = require("tns-core-modules/debugger/devtools-elements");
+    devtools.attachDOMInspectorEventCallbacks(global.__inspector);
+    devtools.attachDOMInspectorCommandCallbacks(global.__inspector);
 }
-function onFragmentHidden(fragment, destroyed) {
-    if (frame_common_1.traceEnabled()) {
-        frame_common_1.traceWrite("HIDDEN " + fragment + "; destroyed: " + destroyed, frame_common_1.traceCategories.NativeLifecycle);
+function getAttachListener() {
+    if (!exports.attachStateChangeListener) {
+        var AttachListener = (function (_super) {
+            __extends(AttachListener, _super);
+            function AttachListener() {
+                var _this = _super.call(this) || this;
+                return global.__native(_this);
+            }
+            AttachListener.prototype.onViewAttachedToWindow = function (view) {
+                var owner = view[ownerSymbol];
+                if (owner) {
+                    owner._onAttachedToWindow();
+                }
+            };
+            AttachListener.prototype.onViewDetachedFromWindow = function (view) {
+                var owner = view[ownerSymbol];
+                if (owner) {
+                    owner._onDetachedFromWindow();
+                }
+            };
+            AttachListener = __decorate([
+                Interfaces([android.view.View.OnAttachStateChangeListener])
+            ], AttachListener);
+            return AttachListener;
+        }(java.lang.Object));
+        exports.attachStateChangeListener = new AttachListener();
     }
-    var callbacks = fragment[CALLBACKS];
-    var isBack = callbacks.entry.isBack;
-    callbacks.entry.isBack = undefined;
-    callbacks.entry.resolvedPage._fragmentTag = undefined;
-    transitionModule._onFragmentHidden(fragment, isBack, destroyed);
+    return exports.attachStateChangeListener;
 }
+function reloadPage() {
+    var activity = application.android.foregroundActivity;
+    var callbacks = activity[CALLBACKS];
+    var rootView = callbacks.getRootView();
+    if (!rootView || !rootView._onLivesync()) {
+        callbacks.resetActivityContent(activity);
+    }
+}
+exports.reloadPage = reloadPage;
+global.__onLiveSyncCore = reloadPage;
 var Frame = (function (_super) {
     __extends(Frame, _super);
     function Frame() {
         var _this = _super.call(this) || this;
         _this._containerViewId = -1;
+        _this._tearDownPending = false;
+        _this._attachedToWindow = false;
+        _this._isBack = true;
         _this._android = new AndroidFrame(_this);
         return _this;
     }
@@ -98,30 +108,63 @@ var Frame = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    Frame.prototype._navigateCore = function (backstackEntry) {
-        _super.prototype._navigateCore.call(this, backstackEntry);
-        var activity = this._android.activity;
-        if (!activity) {
-            var currentActivity = this._android.currentActivity;
-            if (currentActivity) {
-                startActivity(currentActivity, this._android.frameId);
-            }
-            this._delayedNavigationEntry = backstackEntry;
+    Frame.prototype._onAttachedToWindow = function () {
+        _super.prototype._onAttachedToWindow.call(this);
+        this._attachedToWindow = true;
+        this._processNextNavigationEntry();
+    };
+    Frame.prototype._onDetachedFromWindow = function () {
+        _super.prototype._onDetachedFromWindow.call(this);
+        this._attachedToWindow = false;
+    };
+    Frame.prototype._processNextNavigationEntry = function () {
+        if (!this.isLoaded || !this._attachedToWindow) {
             return;
         }
-        var manager = activity.getFragmentManager();
-        var currentFragment;
-        if (this._currentEntry) {
-            this._currentEntry.isNavigation = true;
-            currentFragment = manager.findFragmentByTag(this._currentEntry.fragmentTag);
+        var animatedEntries = fragment_transitions_1._getAnimatedEntries(this._android.frameId);
+        if (animatedEntries) {
+            if (animatedEntries.size > 0) {
+                return;
+            }
         }
-        var clearHistory = backstackEntry.entry.clearHistory;
-        if (clearHistory) {
-            navDepth = -1;
+        var manager = this._getFragmentManager();
+        var entry = this._currentEntry;
+        if (entry && manager && !manager.findFragmentByTag(entry.fragmentTag)) {
+            this._currentEntry = null;
+            this._navigateCore(entry);
+            this._currentEntry = entry;
         }
-        navDepth++;
-        fragmentId++;
-        var newFragmentTag = "fragment" + fragmentId + "[" + navDepth + "]";
+        else {
+            _super.prototype._processNextNavigationEntry.call(this);
+        }
+    };
+    Frame.prototype._onRootViewReset = function () {
+        this.disposeCurrentFragment();
+        _super.prototype._onRootViewReset.call(this);
+    };
+    Frame.prototype.onUnloaded = function () {
+        this.disposeCurrentFragment();
+        _super.prototype.onUnloaded.call(this);
+    };
+    Frame.prototype.disposeCurrentFragment = function () {
+        if (!this._currentEntry || !this._currentEntry.fragment) {
+            return;
+        }
+        var manager = this._getFragmentManager();
+        var transaction = manager.beginTransaction();
+        var androidSdkVersion = sdkVersion();
+        if (androidSdkVersion !== 21 && androidSdkVersion !== 22) {
+            transaction.remove(this._currentEntry.fragment);
+        }
+        else {
+            var dummyFragmentTag = "dummy";
+            var dummyFragment = this.createFragment({}, dummyFragmentTag);
+            transaction.replace(this.containerViewId, dummyFragment, dummyFragmentTag);
+            transaction.remove(dummyFragment);
+        }
+        transaction.commitAllowingStateLoss();
+    };
+    Frame.prototype.createFragment = function (backstackEntry, fragmentTag) {
         ensureFragmentClass();
         var newFragment = new fragmentClass();
         var args = new android.os.Bundle();
@@ -131,116 +174,139 @@ var Frame = (function (_super) {
         var callbacks = newFragment[CALLBACKS];
         callbacks.frame = this;
         callbacks.entry = backstackEntry;
-        backstackEntry.isNavigation = true;
-        backstackEntry.fragmentTag = newFragmentTag;
+        backstackEntry.fragment = newFragment;
+        backstackEntry.fragmentTag = fragmentTag;
         backstackEntry.navDepth = navDepth;
-        var fragmentTransaction = manager.beginTransaction();
-        if (frame_common_1.traceEnabled()) {
-            frame_common_1.traceWrite("BEGIN TRANSACTION " + fragmentTransaction, frame_common_1.traceCategories.Navigation);
-        }
-        var animated = this._getIsAnimatedNavigation(backstackEntry.entry);
-        var navigationTransition = this._getNavigationTransition(backstackEntry.entry);
-        if (currentFragment) {
-            transitionModule._clearForwardTransitions(currentFragment);
-            if (animated && navigationTransition) {
-                transitionModule._setAndroidFragmentTransitions(this.android.cachePagesOnNavigate, navigationTransition, currentFragment, newFragment, fragmentTransaction);
-            }
-        }
-        var length = manager.getBackStackEntryCount();
-        var emptyNativeBackStack = clearHistory && length > 0;
-        if (emptyNativeBackStack) {
-            for (var i = 0; i < length; i++) {
-                var fragmentToRemove = manager.findFragmentByTag(manager.getBackStackEntryAt(i).getName());
-                Frame._clearHistory(fragmentToRemove);
-            }
-            if (currentFragment) {
-                transitionModule._prepareCurrentFragmentForClearHistory(currentFragment);
-            }
-            var firstEntryName = manager.getBackStackEntryAt(0).getName();
-            if (frame_common_1.traceEnabled()) {
-                frame_common_1.traceWrite("POP BACK STACK " + firstEntryName, frame_common_1.traceCategories.Navigation);
-            }
-            manager.popBackStackImmediate(firstEntryName, android.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
-        }
-        if (currentFragment && !emptyNativeBackStack) {
-            if (this.android.cachePagesOnNavigate && !clearHistory) {
-                if (frame_common_1.traceEnabled()) {
-                    frame_common_1.traceWrite("\tHIDE " + currentFragment, frame_common_1.traceCategories.Navigation);
+        return newFragment;
+    };
+    Frame.prototype.setCurrent = function (entry, isBack) {
+        var current = this._currentEntry;
+        var currentEntryChanged = current !== entry;
+        if (currentEntryChanged) {
+            this._updateBackstack(entry, isBack);
+            if (this._tearDownPending) {
+                this._tearDownPending = false;
+                if (!entry.recreated) {
+                    clearEntry(entry);
                 }
-                fragmentTransaction.hide(currentFragment);
-            }
-            else {
-                if (frame_common_1.traceEnabled()) {
-                    frame_common_1.traceWrite("\tREMOVE " + currentFragment, frame_common_1.traceCategories.Navigation);
+                if (current && !current.recreated) {
+                    clearEntry(current);
                 }
-                fragmentTransaction.remove(currentFragment);
+                var context_1 = this._context;
+                if (context_1 && !entry.recreated) {
+                    entry.fragment = this.createFragment(entry, entry.fragmentTag);
+                    entry.resolvedPage._setupUI(context_1);
+                }
+                entry.recreated = false;
+                current.recreated = false;
             }
+            _super.prototype.setCurrent.call(this, entry, isBack);
+            this._processNavigationQueue(entry.resolvedPage);
         }
-        if (frame_common_1.traceEnabled()) {
-            frame_common_1.traceWrite("\tADD " + newFragmentTag + "<" + callbacks.entry.resolvedPage + ">", frame_common_1.traceCategories.Navigation);
-        }
-        fragmentTransaction.add(this.containerViewId, newFragment, newFragmentTag);
-        if (this.backStack.length > 0 && currentFragment && !clearHistory) {
-            if (frame_common_1.traceEnabled()) {
-                frame_common_1.traceWrite("\tADD TO BACK STACK " + currentFragment, frame_common_1.traceCategories.Navigation);
-            }
-            fragmentTransaction.addToBackStack(this._currentEntry.fragmentTag);
-        }
-        if (currentFragment) {
-            ensureAnimationFixed();
-            var trans = void 0;
-            if (this.android.cachePagesOnNavigate && animationFixed < 0 && !navigationTransition) {
-                trans = android.app.FragmentTransaction.TRANSIT_NONE;
-            }
-            else {
-                trans = animated ? android.app.FragmentTransaction.TRANSIT_FRAGMENT_OPEN : android.app.FragmentTransaction.TRANSIT_NONE;
-            }
-            if (frame_common_1.traceEnabled()) {
-                frame_common_1.traceWrite("\tSET TRANSITION " + (trans === 0 ? "NONE" : "OPEN"), frame_common_1.traceCategories.Navigation);
-            }
-            fragmentTransaction.setTransition(trans);
-        }
-        fragmentTransaction.commit();
-        if (frame_common_1.traceEnabled()) {
-            frame_common_1.traceWrite("END TRANSACTION " + fragmentTransaction, frame_common_1.traceCategories.Navigation);
+        else {
+            this._processNextNavigationEntry();
         }
     };
-    Frame._clearHistory = function (fragment) {
-        if (frame_common_1.traceEnabled()) {
-            frame_common_1.traceWrite("CLEAR HISTORY FOR " + fragment, frame_common_1.traceCategories.Navigation);
+    Frame.prototype.onBackPressed = function () {
+        if (this.canGoBack()) {
+            this.goBack();
+            return true;
         }
-        var callbacks = fragment[CALLBACKS];
-        callbacks.clearHistory = true;
-        transitionModule._clearBackwardTransitions(fragment);
-        transitionModule._clearForwardTransitions(fragment);
-        transitionModule._removePageNativeViewFromAndroidParent(callbacks.entry.resolvedPage);
+        if (!this.navigationQueueIsEmpty()) {
+            var manager = this._getFragmentManager();
+            if (manager) {
+                manager.executePendingTransactions();
+                return true;
+            }
+        }
+        return false;
+    };
+    Frame.prototype._navigateCore = function (newEntry) {
+        _super.prototype._navigateCore.call(this, newEntry);
+        this._isBack = false;
+        newEntry.frameId = this._android.frameId;
+        var activity = this._android.activity;
+        if (!activity) {
+            var currentActivity = this._android.currentActivity;
+            if (currentActivity) {
+                startActivity(currentActivity, this._android.frameId);
+            }
+            return;
+        }
+        var manager = this._getFragmentManager();
+        var clearHistory = newEntry.entry.clearHistory;
+        var currentEntry = this._currentEntry;
+        if (clearHistory) {
+            navDepth = -1;
+        }
+        navDepth++;
+        fragmentId++;
+        var newFragmentTag = "fragment" + fragmentId + "[" + navDepth + "]";
+        var newFragment = this.createFragment(newEntry, newFragmentTag);
+        var transaction = manager.beginTransaction();
+        var animated = this._getIsAnimatedNavigation(newEntry.entry);
+        var navigationTransition = this._currentEntry ? this._getNavigationTransition(newEntry.entry) : null;
+        fragment_transitions_1._setAndroidFragmentTransitions(animated, navigationTransition, currentEntry, newEntry, transaction, manager, this._android.frameId);
+        if (currentEntry && animated && !navigationTransition) {
+            transaction.setTransition(android.app.FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
+        }
+        transaction.replace(this.containerViewId, newFragment, newFragmentTag);
+        transaction.commit();
     };
     Frame.prototype._goBackCore = function (backstackEntry) {
+        this._isBack = true;
         _super.prototype._goBackCore.call(this, backstackEntry);
         navDepth = backstackEntry.navDepth;
-        backstackEntry.isNavigation = true;
-        if (this._currentEntry) {
-            this._currentEntry.isBack = true;
-            this._currentEntry.isNavigation = true;
+        var manager = this._getFragmentManager();
+        var transaction = manager.beginTransaction();
+        if (!backstackEntry.fragment) {
+            backstackEntry.fragment = this.createFragment(backstackEntry, backstackEntry.fragmentTag);
+            fragment_transitions_1._updateTransitions(backstackEntry);
         }
-        var manager = this._android.activity.getFragmentManager();
-        if (manager.getBackStackEntryCount() > 0) {
-            manager.popBackStack(backstackEntry.fragmentTag, android.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        var transitionReversed = fragment_transitions_1._reverseTransitions(backstackEntry, this._currentEntry);
+        if (!transitionReversed) {
+            transaction.setCustomAnimations(-30, -40, -10, -20);
         }
+        transaction.replace(this.containerViewId, backstackEntry.fragment, backstackEntry.fragmentTag);
+        transaction.commit();
+    };
+    Frame.prototype._removeEntry = function (removed) {
+        _super.prototype._removeEntry.call(this, removed);
+        if (removed.fragment) {
+            fragment_transitions_1._clearEntry(removed);
+        }
+        removed.fragment = null;
+        removed.viewSavedState = null;
     };
     Frame.prototype.createNativeView = function () {
-        var root = new org.nativescript.widgets.ContentLayout(this._context);
-        if (this._containerViewId < 0) {
-            this._containerViewId = android.view.View.generateViewId();
-        }
-        return root;
+        return new org.nativescript.widgets.ContentLayout(this._context);
     };
     Frame.prototype.initNativeView = function () {
         _super.prototype.initNativeView.call(this);
-        this._android.rootViewGroup = this.nativeView;
+        var listener = getAttachListener();
+        this.nativeViewProtected.addOnAttachStateChangeListener(listener);
+        this.nativeViewProtected[ownerSymbol] = this;
+        this._android.rootViewGroup = this.nativeViewProtected;
+        if (this._containerViewId < 0) {
+            this._containerViewId = android.view.View.generateViewId();
+        }
         this._android.rootViewGroup.setId(this._containerViewId);
     };
     Frame.prototype.disposeNativeView = function () {
+        var _this = this;
+        var listener = getAttachListener();
+        this.nativeViewProtected.removeOnAttachStateChangeListener(listener);
+        this.nativeViewProtected[ownerSymbol] = null;
+        this._tearDownPending = !!this._executingEntry;
+        var current = this._currentEntry;
+        this.backStack.forEach(function (entry) {
+            if (entry !== _this._executingEntry) {
+                clearEntry(entry);
+            }
+        });
+        if (current && !this._executingEntry) {
+            clearEntry(current);
+        }
         this._android.rootViewGroup = null;
         _super.prototype.disposeNativeView.call(this);
     };
@@ -253,19 +319,6 @@ var Frame = (function (_super) {
             this._android.activity.finish();
         }
     };
-    Frame.prototype._printNativeBackStack = function () {
-        if (!this._android.activity) {
-            return;
-        }
-        var manager = this._android.activity.getFragmentManager();
-        var length = manager.getBackStackEntryCount();
-        var i = length - 1;
-        console.log("Fragment Manager Back Stack: ");
-        while (i >= 0) {
-            var fragment = manager.findFragmentByTag(manager.getBackStackEntryAt(i--).getName());
-            console.log("\t" + fragment);
-        }
-    };
     Frame.prototype._getNavBarVisible = function (page) {
         if (page.actionBarHidden !== undefined) {
             return !page.actionBarHidden;
@@ -275,54 +328,33 @@ var Frame = (function (_super) {
         }
         return true;
     };
-    Frame.prototype._processNavigationContext = function (navigationContext) {
-        var _this = this;
-        var activity = this._android.activity;
-        if (activity) {
-            var isForegroundActivity = activity === frame_common_1.application.android.foregroundActivity;
-            var isPaused = frame_common_1.application.android.paused;
-            if (activity && !isForegroundActivity || (isForegroundActivity && isPaused)) {
-                var weakActivity_1 = new WeakRef(activity);
-                var resume_1 = function (args) {
-                    var weakActivityInstance = weakActivity_1.get();
-                    var isCurrent = args.activity === weakActivityInstance;
-                    if (!weakActivityInstance) {
-                        if (frame_common_1.traceEnabled()) {
-                            frame_common_1.traceWrite("Frame _processNavigationContext: Drop For Activity GC-ed", frame_common_1.traceCategories.Navigation);
-                        }
-                        unsubscribe_1();
-                        return;
-                    }
-                    if (isCurrent) {
-                        if (frame_common_1.traceEnabled()) {
-                            frame_common_1.traceWrite("Frame _processNavigationContext: Activity.Resumed, Continue", frame_common_1.traceCategories.Navigation);
-                        }
-                        _super.prototype._processNavigationContext.call(_this, navigationContext);
-                        unsubscribe_1();
-                    }
-                };
-                var unsubscribe_1 = function () {
-                    if (frame_common_1.traceEnabled()) {
-                        frame_common_1.traceWrite("Frame _processNavigationContext: Unsubscribe from Activity.Resumed", frame_common_1.traceCategories.Navigation);
-                    }
-                    frame_common_1.application.android.off(frame_common_1.application.AndroidApplication.activityResumedEvent, resume_1);
-                    frame_common_1.application.android.off(frame_common_1.application.AndroidApplication.activityStoppedEvent, unsubscribe_1);
-                    frame_common_1.application.android.off(frame_common_1.application.AndroidApplication.activityDestroyedEvent, unsubscribe_1);
-                };
-                if (frame_common_1.traceEnabled()) {
-                    frame_common_1.traceWrite("Frame._processNavigationContext: Subscribe for Activity.Resumed", frame_common_1.traceCategories.Navigation);
-                }
-                frame_common_1.application.android.on(frame_common_1.application.AndroidApplication.activityResumedEvent, resume_1);
-                frame_common_1.application.android.on(frame_common_1.application.AndroidApplication.activityStoppedEvent, unsubscribe_1);
-                frame_common_1.application.android.on(frame_common_1.application.AndroidApplication.activityDestroyedEvent, unsubscribe_1);
-                return;
+    Frame.prototype._saveFragmentsState = function () {
+        this.backStack.forEach(function (entry) {
+            var view = entry.resolvedPage.nativeViewProtected;
+            if (!entry.viewSavedState && view) {
+                var viewState = new android.util.SparseArray();
+                view.saveHierarchyState(viewState);
+                entry.viewSavedState = viewState;
             }
-        }
-        _super.prototype._processNavigationContext.call(this, navigationContext);
+        });
     };
+    __decorate([
+        profiling_1.profile
+    ], Frame.prototype, "_navigateCore", null);
     return Frame;
 }(frame_common_1.FrameBase));
 exports.Frame = Frame;
+function clearEntry(entry) {
+    if (entry.fragment) {
+        fragment_transitions_1._clearFragment(entry);
+    }
+    entry.recreated = false;
+    entry.fragment = null;
+    var page = entry.resolvedPage;
+    if (page._context) {
+        entry.resolvedPage._tearDownUI(true);
+    }
+}
 var framesCounter = 0;
 var framesCache = new Array();
 var AndroidFrame = (function (_super) {
@@ -331,6 +363,7 @@ var AndroidFrame = (function (_super) {
         var _this = _super.call(this) || this;
         _this.hasOwnActivity = false;
         _this._showActionBar = true;
+        _this.cachePagesOnNavigate = true;
         _this._owner = owner;
         _this.frameId = framesCounter++;
         framesCache.push(new WeakRef(_this));
@@ -409,38 +442,16 @@ var AndroidFrame = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    Object.defineProperty(AndroidFrame.prototype, "cachePagesOnNavigate", {
-        get: function () {
-            return this._cachePagesOnNavigate;
-        },
-        set: function (value) {
-            if (this._cachePagesOnNavigate !== value) {
-                if (this._owner.backStack.length > 0) {
-                    this._owner._printFrameBackStack();
-                    this._owner._printNativeBackStack();
-                    console.log("currentPage: " + this._owner.currentPage);
-                    throw new Error("Cannot set cachePagesOnNavigate if there are items in the back stack.");
-                }
-                this._cachePagesOnNavigate = value;
-            }
-        },
-        enumerable: true,
-        configurable: true
-    });
     AndroidFrame.prototype.canGoBack = function () {
         if (!this.activity) {
             return false;
         }
         return this.activity.getIntent().getAction() !== android.content.Intent.ACTION_MAIN;
     };
-    AndroidFrame.prototype.fragmentForPage = function (page) {
-        if (!page) {
-            return undefined;
-        }
-        var tag = page._fragmentTag;
+    AndroidFrame.prototype.fragmentForPage = function (entry) {
+        var tag = entry && entry.fragmentTag;
         if (tag) {
-            var manager = this.activity.getFragmentManager();
-            return manager.findFragmentByTag(tag);
+            return this.owner._getFragmentManager().findFragmentByTag(tag);
         }
         return undefined;
     };
@@ -448,43 +459,29 @@ var AndroidFrame = (function (_super) {
 }(frame_common_1.Observable));
 function findPageForFragment(fragment, frame) {
     var fragmentTag = fragment.getTag();
-    var page;
-    var entry;
     if (frame_common_1.traceEnabled()) {
         frame_common_1.traceWrite("Finding page for " + fragmentTag + ".", frame_common_1.traceCategories.NativeLifecycle);
     }
-    if (fragmentTag === constants_1.DIALOG_FRAGMENT_TAG) {
-        if (frame_common_1.traceEnabled()) {
-            frame_common_1.traceWrite("No need to find page for dialog fragment.", frame_common_1.traceCategories.NativeLifecycle);
-        }
-        return;
+    var entry;
+    var current = frame._currentEntry;
+    var navigating = frame._executingEntry;
+    if (current && current.fragmentTag === fragmentTag) {
+        entry = current;
     }
-    if (frame._currentEntry && frame._currentEntry.fragmentTag === fragmentTag) {
-        page = frame.currentPage;
-        entry = frame._currentEntry;
-        if (frame_common_1.traceEnabled()) {
-            frame_common_1.traceWrite("Current page matches fragment " + fragmentTag + ".", frame_common_1.traceCategories.NativeLifecycle);
-        }
+    else if (navigating && navigating.fragmentTag === fragmentTag) {
+        entry = navigating;
     }
-    else {
-        var backStack = frame.backStack;
-        for (var i = 0; i < backStack.length; i++) {
-            if (backStack[i].fragmentTag === fragmentTag) {
-                entry = backStack[i];
-                break;
-            }
-        }
-        if (entry) {
-            page = entry.resolvedPage;
-            if (frame_common_1.traceEnabled()) {
-                frame_common_1.traceWrite("Found " + page + " for " + fragmentTag, frame_common_1.traceCategories.NativeLifecycle);
-            }
-        }
+    var page;
+    if (entry) {
+        entry.recreated = true;
+        page = entry.resolvedPage;
     }
     if (page) {
         var callbacks = fragment[CALLBACKS];
         callbacks.frame = frame;
         callbacks.entry = entry;
+        entry.fragment = fragment;
+        fragment_transitions_1._updateTransitions(entry);
     }
     else {
         throw new Error("Could not find a page for " + fragmentTag + ".");
@@ -496,7 +493,7 @@ function startActivity(activity, frameId) {
     intent.putExtra(INTENT_EXTRA, frameId);
     activity.startActivity(intent);
 }
-function getFrameById(frameId) {
+function getFrameByNumberId(frameId) {
     for (var i = 0; i < framesCache.length; i++) {
         var aliveFrame = framesCache[i].get();
         if (aliveFrame && aliveFrame.frameId === frameId) {
@@ -504,12 +501,6 @@ function getFrameById(frameId) {
         }
     }
     return null;
-}
-var animationFixed;
-function ensureAnimationFixed() {
-    if (!animationFixed) {
-        animationFixed = android.os.Build.VERSION.SDK_INT >= 19 ? 1 : -1;
-    }
 }
 function ensureFragmentClass() {
     if (fragmentClass) {
@@ -536,12 +527,6 @@ var FragmentCallbacksImplementation = (function () {
             frame_common_1.traceWrite(fragment + ".onHiddenChanged(" + hidden + ")", frame_common_1.traceCategories.NativeLifecycle);
         }
         superFunc.call(fragment, hidden);
-        if (hidden) {
-            onFragmentHidden(fragment, false);
-        }
-        else {
-            onFragmentShown(fragment);
-        }
     };
     FragmentCallbacksImplementation.prototype.onCreateAnimator = function (fragment, transit, enter, nextAnim, superFunc) {
         var nextAnimString;
@@ -559,12 +544,12 @@ var FragmentCallbacksImplementation = (function () {
                 nextAnimString = "popExit";
                 break;
         }
-        var animator = transitionModule._onFragmentCreateAnimator(fragment, nextAnim);
+        var animator = fragment_transitions_1._onFragmentCreateAnimator(this.entry, fragment, nextAnim, enter);
         if (!animator) {
             animator = superFunc.call(fragment, transit, enter, nextAnim);
         }
         if (frame_common_1.traceEnabled()) {
-            frame_common_1.traceWrite(fragment + ".onCreateAnimator(" + transit + ", " + (enter ? "enter" : "exit") + ", " + nextAnimString + "): " + animator, frame_common_1.traceCategories.NativeLifecycle);
+            frame_common_1.traceWrite(fragment + ".onCreateAnimator(" + transit + ", " + (enter ? "enter" : "exit") + ", " + nextAnimString + "): " + (animator ? "animator" : "no animator"), frame_common_1.traceCategories.NativeLifecycle);
         }
         return animator;
     };
@@ -574,15 +559,13 @@ var FragmentCallbacksImplementation = (function () {
         }
         superFunc.call(fragment, savedInstanceState);
         if (!this.entry) {
-            var frameId = fragment.getArguments().getInt(FRAMEID);
-            var frame = getFrameById(frameId);
-            if (frame) {
-                this.frame = frame;
-            }
-            else {
+            var args = fragment.getArguments();
+            var frameId = args.getInt(FRAMEID);
+            var frame = getFrameByNumberId(frameId);
+            if (!frame) {
                 throw new Error("Cannot find Frame for " + fragment);
             }
-            findPageForFragment(fragment, this.frame);
+            findPageForFragment(fragment, frame);
         }
     };
     FragmentCallbacksImplementation.prototype.onCreateView = function (fragment, inflater, container, savedInstanceState, superFunc) {
@@ -591,37 +574,40 @@ var FragmentCallbacksImplementation = (function () {
         }
         var entry = this.entry;
         var page = entry.resolvedPage;
-        try {
-            if (savedInstanceState && savedInstanceState.getBoolean(HIDDEN, false)) {
-                fragment.getFragmentManager().beginTransaction().hide(fragment).commit();
-                this.frame._addView(page);
-            }
-            else {
-                onFragmentShown(fragment);
+        var frame = this.frame;
+        if (page.parent === frame) {
+            if (!page._context) {
+                var context_2 = container && container.getContext() || inflater && inflater.getContext();
+                page._setupUI(context_2);
             }
         }
-        catch (ex) {
-            var label = new android.widget.TextView(container.getContext());
-            label.setText(ex.message + ", " + ex.stackTrace);
-            return label;
+        else {
+            if (!this.frame._styleScope) {
+                page._updateStyleScope();
+            }
+            this.frame._addView(page);
         }
-        return page.nativeView;
+        if (frame.isLoaded && !page.isLoaded) {
+            page.callLoaded();
+        }
+        var savedState = entry.viewSavedState;
+        if (savedState) {
+            page.nativeViewProtected.restoreHierarchyState(savedState);
+            entry.viewSavedState = null;
+        }
+        return page.nativeViewProtected;
     };
     FragmentCallbacksImplementation.prototype.onSaveInstanceState = function (fragment, outState, superFunc) {
         if (frame_common_1.traceEnabled()) {
             frame_common_1.traceWrite(fragment + ".onSaveInstanceState(" + outState + ")", frame_common_1.traceCategories.NativeLifecycle);
         }
         superFunc.call(fragment, outState);
-        if (fragment.isHidden()) {
-            outState.putBoolean(HIDDEN, true);
-        }
     };
     FragmentCallbacksImplementation.prototype.onDestroyView = function (fragment, superFunc) {
         if (frame_common_1.traceEnabled()) {
             frame_common_1.traceWrite(fragment + ".onDestroyView()", frame_common_1.traceCategories.NativeLifecycle);
         }
         superFunc.call(fragment);
-        onFragmentHidden(fragment, true);
     };
     FragmentCallbacksImplementation.prototype.onDestroy = function (fragment, superFunc) {
         if (frame_common_1.traceEnabled()) {
@@ -629,62 +615,76 @@ var FragmentCallbacksImplementation = (function () {
         }
         superFunc.call(fragment);
     };
-    FragmentCallbacksImplementation.prototype.toStringOverride = function (fragment, superFunc) {
-        return fragment.getTag() + "<" + (this.entry ? this.entry.resolvedPage : "") + ">";
+    FragmentCallbacksImplementation.prototype.onStop = function (fragment, superFunc) {
+        superFunc.call(fragment);
     };
+    FragmentCallbacksImplementation.prototype.toStringOverride = function (fragment, superFunc) {
+        var entry = this.entry;
+        if (entry) {
+            return entry.fragmentTag + "<" + entry.resolvedPage + ">";
+        }
+        else {
+            return "NO ENTRY, " + superFunc.call(fragment);
+        }
+    };
+    __decorate([
+        profiling_1.profile
+    ], FragmentCallbacksImplementation.prototype, "onHiddenChanged", null);
+    __decorate([
+        profiling_1.profile
+    ], FragmentCallbacksImplementation.prototype, "onCreateAnimator", null);
+    __decorate([
+        profiling_1.profile
+    ], FragmentCallbacksImplementation.prototype, "onCreate", null);
+    __decorate([
+        profiling_1.profile
+    ], FragmentCallbacksImplementation.prototype, "onCreateView", null);
+    __decorate([
+        profiling_1.profile
+    ], FragmentCallbacksImplementation.prototype, "onSaveInstanceState", null);
+    __decorate([
+        profiling_1.profile
+    ], FragmentCallbacksImplementation.prototype, "onDestroyView", null);
+    __decorate([
+        profiling_1.profile
+    ], FragmentCallbacksImplementation.prototype, "onDestroy", null);
+    __decorate([
+        profiling_1.profile
+    ], FragmentCallbacksImplementation.prototype, "onStop", null);
+    __decorate([
+        profiling_1.profile
+    ], FragmentCallbacksImplementation.prototype, "toStringOverride", null);
     return FragmentCallbacksImplementation;
 }());
 var ActivityCallbacksImplementation = (function () {
     function ActivityCallbacksImplementation() {
     }
+    ActivityCallbacksImplementation.prototype.getRootView = function () {
+        return this._rootView;
+    };
     ActivityCallbacksImplementation.prototype.onCreate = function (activity, savedInstanceState, superFunc) {
         if (frame_common_1.traceEnabled()) {
             frame_common_1.traceWrite("Activity.onCreate(" + savedInstanceState + ")", frame_common_1.traceCategories.NativeLifecycle);
         }
-        var app = frame_common_1.application.android;
-        var intent = activity.getIntent();
-        var launchArgs = { eventName: frame_common_1.application.launchEvent, object: app, android: intent };
-        frame_common_1.application.notify(launchArgs);
-        var frameId = -1;
-        var rootView = launchArgs.root;
-        var extras = intent.getExtras();
-        if (extras) {
-            frameId = extras.getInt(INTENT_EXTRA, -1);
-        }
-        if (savedInstanceState && frameId < 0) {
-            frameId = savedInstanceState.getInt(INTENT_EXTRA, -1);
-        }
-        var frame;
-        var navParam;
-        if (frameId >= 0) {
-            rootView = getFrameById(frameId);
-        }
-        if (!rootView) {
-            navParam = frame_common_1.application.getMainEntry();
-            if (navParam) {
-                frame = new Frame();
-            }
-            else {
-                throw new Error("A Frame must be used to navigate to a Page.");
-            }
-            rootView = frame;
-        }
-        var isRestart = !!savedInstanceState && activityInitialized;
+        var isRestart = !!savedInstanceState && exports.moduleLoaded;
         superFunc.call(activity, isRestart ? savedInstanceState : null);
-        this._rootView = rootView;
-        rootView._setupUI(activity);
-        activity.setContentView(rootView.nativeView, new org.nativescript.widgets.CommonLayoutParams());
-        if (frame) {
-            frame.navigate(navParam);
+        if (savedInstanceState) {
+            var rootViewId = savedInstanceState.getInt(ROOT_VIEW_ID_EXTRA, -1);
+            if (rootViewId !== -1 && activityRootViewsMap.has(rootViewId)) {
+                this._rootView = activityRootViewsMap.get(rootViewId).get();
+            }
         }
-        activityInitialized = true;
+        this.setActivityContent(activity, savedInstanceState, true);
+        exports.moduleLoaded = true;
     };
     ActivityCallbacksImplementation.prototype.onSaveInstanceState = function (activity, outState, superFunc) {
         superFunc.call(activity, outState);
-        var view = this._rootView;
-        if (view instanceof Frame) {
-            outState.putInt(INTENT_EXTRA, view.android.frameId);
+        var rootView = this._rootView;
+        if (rootView instanceof Frame) {
+            outState.putInt(INTENT_EXTRA, rootView.android.frameId);
+            rootView._saveFragmentsState();
         }
+        outState.putInt(ROOT_VIEW_ID_EXTRA, rootView._domId);
     };
     ActivityCallbacksImplementation.prototype.onStart = function (activity, superFunc) {
         superFunc.call(activity);
@@ -693,7 +693,7 @@ var ActivityCallbacksImplementation = (function () {
         }
         var rootView = this._rootView;
         if (rootView && !rootView.isLoaded) {
-            rootView.onLoaded();
+            rootView.callLoaded();
         }
     };
     ActivityCallbacksImplementation.prototype.onStop = function (activity, superFunc) {
@@ -703,20 +703,20 @@ var ActivityCallbacksImplementation = (function () {
         }
         var rootView = this._rootView;
         if (rootView && rootView.isLoaded) {
-            rootView.onUnloaded();
+            rootView.callUnloaded();
         }
     };
     ActivityCallbacksImplementation.prototype.onDestroy = function (activity, superFunc) {
-        var rootView = this._rootView;
-        if (rootView && rootView._context) {
-            rootView._tearDownUI(true);
-        }
-        superFunc.call(activity);
         if (frame_common_1.traceEnabled()) {
             frame_common_1.traceWrite("NativeScriptActivity.onDestroy();", frame_common_1.traceCategories.NativeLifecycle);
         }
-        var exitArgs = { eventName: frame_common_1.application.exitEvent, object: frame_common_1.application.android, android: activity };
-        frame_common_1.application.notify(exitArgs);
+        var rootView = this._rootView;
+        if (rootView) {
+            rootView._tearDownUI(true);
+        }
+        var exitArgs = { eventName: application.exitEvent, object: application.android, android: activity };
+        application.notify(exitArgs);
+        superFunc.call(activity);
     };
     ActivityCallbacksImplementation.prototype.onBackPressed = function (activity, superFunc) {
         if (frame_common_1.traceEnabled()) {
@@ -724,15 +724,32 @@ var ActivityCallbacksImplementation = (function () {
         }
         var args = {
             eventName: "activityBackPressed",
-            object: frame_common_1.application.android,
+            object: application.android,
             activity: activity,
             cancel: false,
         };
-        frame_common_1.application.android.notify(args);
+        application.android.notify(args);
         if (args.cancel) {
             return;
         }
-        if (!frame_common_1.goBack()) {
+        var view = this._rootView;
+        var callSuper = false;
+        if (view instanceof Frame) {
+            callSuper = !frame_common_1.goBack();
+        }
+        else {
+            var viewArgs = {
+                eventName: "activityBackPressed",
+                object: view,
+                activity: activity,
+                cancel: false,
+            };
+            view.notify(viewArgs);
+            if (!viewArgs.cancel && !view.onBackPressed()) {
+                callSuper = true;
+            }
+        }
+        if (callSuper) {
             superFunc.call(activity);
         }
     };
@@ -740,9 +757,9 @@ var ActivityCallbacksImplementation = (function () {
         if (frame_common_1.traceEnabled()) {
             frame_common_1.traceWrite("NativeScriptActivity.onRequestPermissionsResult;", frame_common_1.traceCategories.NativeLifecycle);
         }
-        frame_common_1.application.android.notify({
+        application.android.notify({
             eventName: "activityRequestPermissions",
-            object: frame_common_1.application.android,
+            object: application.android,
             activity: activity,
             requestCode: requestCode,
             permissions: permissions,
@@ -754,17 +771,106 @@ var ActivityCallbacksImplementation = (function () {
         if (frame_common_1.traceEnabled()) {
             frame_common_1.traceWrite("NativeScriptActivity.onActivityResult(" + requestCode + ", " + resultCode + ", " + data + ")", frame_common_1.traceCategories.NativeLifecycle);
         }
-        frame_common_1.application.android.notify({
+        application.android.notify({
             eventName: "activityResult",
-            object: frame_common_1.application.android,
+            object: application.android,
             activity: activity,
             requestCode: requestCode,
             resultCode: resultCode,
             intent: data
         });
     };
+    ActivityCallbacksImplementation.prototype.resetActivityContent = function (activity) {
+        if (this._rootView) {
+            var manager = this._rootView._getFragmentManager();
+            manager.executePendingTransactions();
+            this._rootView._onRootViewReset();
+        }
+        this._rootView = null;
+        this.setActivityContent(activity, null, false);
+        this._rootView.callLoaded();
+    };
+    ActivityCallbacksImplementation.prototype.setActivityContent = function (activity, savedInstanceState, fireLaunchEvent) {
+        var shouldCreateRootFrame = application.shouldCreateRootFrame();
+        var rootView = this._rootView;
+        if (frame_common_1.traceEnabled()) {
+            frame_common_1.traceWrite("Frame.setActivityContent rootView: " + rootView + " shouldCreateRootFrame: " + shouldCreateRootFrame + " fireLaunchEvent: " + fireLaunchEvent, frame_common_1.traceCategories.NativeLifecycle);
+        }
+        if (!rootView) {
+            var mainEntry = application.getMainEntry();
+            var intent = activity.getIntent();
+            if (fireLaunchEvent) {
+                rootView = notifyLaunch(intent, savedInstanceState);
+            }
+            if (shouldCreateRootFrame) {
+                var extras = intent.getExtras();
+                var frameId = -1;
+                if (extras) {
+                    frameId = extras.getInt(INTENT_EXTRA, -1);
+                }
+                if (savedInstanceState && frameId < 0) {
+                    frameId = savedInstanceState.getInt(INTENT_EXTRA, -1);
+                }
+                if (!rootView) {
+                    rootView = getFrameByNumberId(frameId) || new Frame();
+                }
+                if (rootView instanceof Frame) {
+                    rootView.navigate(mainEntry);
+                }
+                else {
+                    throw new Error("A Frame must be used to navigate to a Page.");
+                }
+            }
+            else {
+                rootView = rootView || builder_1.createViewFromEntry(mainEntry);
+            }
+            this._rootView = rootView;
+            activityRootViewsMap.set(rootView._domId, new WeakRef(rootView));
+        }
+        if (shouldCreateRootFrame) {
+            rootView._setupUI(activity);
+        }
+        else {
+            rootView._setupAsRootView(activity);
+        }
+        activity.setContentView(rootView.nativeViewProtected, new org.nativescript.widgets.CommonLayoutParams());
+    };
+    __decorate([
+        profiling_1.profile
+    ], ActivityCallbacksImplementation.prototype, "onCreate", null);
+    __decorate([
+        profiling_1.profile
+    ], ActivityCallbacksImplementation.prototype, "onSaveInstanceState", null);
+    __decorate([
+        profiling_1.profile
+    ], ActivityCallbacksImplementation.prototype, "onStart", null);
+    __decorate([
+        profiling_1.profile
+    ], ActivityCallbacksImplementation.prototype, "onStop", null);
+    __decorate([
+        profiling_1.profile
+    ], ActivityCallbacksImplementation.prototype, "onDestroy", null);
+    __decorate([
+        profiling_1.profile
+    ], ActivityCallbacksImplementation.prototype, "onBackPressed", null);
+    __decorate([
+        profiling_1.profile
+    ], ActivityCallbacksImplementation.prototype, "onRequestPermissionsResult", null);
+    __decorate([
+        profiling_1.profile
+    ], ActivityCallbacksImplementation.prototype, "onActivityResult", null);
     return ActivityCallbacksImplementation;
 }());
+var notifyLaunch = profiling_1.profile("notifyLaunch", function notifyLaunch(intent, savedInstanceState) {
+    var launchArgs = {
+        eventName: application.launchEvent,
+        object: application.android,
+        android: intent, savedInstanceState: savedInstanceState
+    };
+    application.notify(launchArgs);
+    application.notify({ eventName: "loadAppCss", object: this, cssFile: application.getCssFileName() });
+    return launchArgs.root;
+});
 function setActivityCallbacks(activity) {
     activity[CALLBACKS] = new ActivityCallbacksImplementation();
 }

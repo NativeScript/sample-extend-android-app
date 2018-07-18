@@ -4,12 +4,12 @@ var types = require("../../utils/types");
 var ChangeType = (function () {
     function ChangeType() {
     }
+    ChangeType.Add = "add";
+    ChangeType.Delete = "delete";
+    ChangeType.Update = "update";
+    ChangeType.Splice = "splice";
     return ChangeType;
 }());
-ChangeType.Add = "add";
-ChangeType.Delete = "delete";
-ChangeType.Update = "update";
-ChangeType.Splice = "splice";
 exports.ChangeType = ChangeType;
 var CHANGE = "change";
 var ObservableArray = (function (_super) {
@@ -186,8 +186,8 @@ var ObservableArray = (function (_super) {
     ObservableArray.prototype.reduceRight = function (callbackfn, initialValue) {
         return this._array.reduceRight(callbackfn, initialValue);
     };
+    ObservableArray.changeEvent = CHANGE;
     return ObservableArray;
 }(observable.Observable));
-ObservableArray.changeEvent = CHANGE;
 exports.ObservableArray = ObservableArray;
 //# sourceMappingURL=observable-array.js.map

@@ -5,7 +5,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var dock_layout_common_1 = require("./dock-layout-common");
 __export(require("./dock-layout-common"));
 dock_layout_common_1.View.prototype[dock_layout_common_1.dockProperty.setNative] = function (value) {
-    var nativeView = this.nativeView;
+    var nativeView = this.nativeViewProtected;
     var lp = nativeView.getLayoutParams() || new org.nativescript.widgets.CommonLayoutParams();
     if (lp instanceof org.nativescript.widgets.CommonLayoutParams) {
         switch (value) {
@@ -39,7 +39,7 @@ var DockLayout = (function (_super) {
         return true;
     };
     DockLayout.prototype[dock_layout_common_1.stretchLastChildProperty.setNative] = function (value) {
-        this.nativeView.setStretchLastChild(value);
+        this.nativeViewProtected.setStretchLastChild(value);
     };
     return DockLayout;
 }(dock_layout_common_1.DockLayoutBase));

@@ -36,9 +36,8 @@ function showDialog(builder) {
             }
         }
     }
-    var buttonColor = dialogs_common_1.getButtonColor();
-    var buttonBackgroundColor = dialogs_common_1.getButtonBackgroundColor();
-    if (buttonColor) {
+    var _a = dialogs_common_1.getButtonColors(), color = _a.color, backgroundColor = _a.backgroundColor;
+    if (color) {
         var buttons = [];
         for (var i = 0; i < 3; i++) {
             var id = dlg.getContext().getResources().getIdentifier("android:id/button" + i, null, null);
@@ -46,11 +45,11 @@ function showDialog(builder) {
         }
         buttons.forEach(function (button) {
             if (button) {
-                if (buttonColor) {
-                    button.setTextColor(buttonColor.android);
+                if (color) {
+                    button.setTextColor(color.android);
                 }
-                if (buttonBackgroundColor) {
-                    button.setBackgroundColor(buttonBackgroundColor.android);
+                if (backgroundColor) {
+                    button.setBackgroundColor(backgroundColor.android);
                 }
             }
         });
@@ -205,14 +204,14 @@ function login(arg) {
     }
     return new Promise(function (resolve, reject) {
         try {
-            var context = application_1.android.foregroundActivity;
+            var context_1 = application_1.android.foregroundActivity;
             var alert_4 = createAlertDialog(options);
-            var userNameInput_1 = new android.widget.EditText(context);
+            var userNameInput_1 = new android.widget.EditText(context_1);
             userNameInput_1.setText(options.userName ? options.userName : "");
-            var passwordInput_1 = new android.widget.EditText(context);
+            var passwordInput_1 = new android.widget.EditText(context_1);
             passwordInput_1.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
             passwordInput_1.setText(options.password ? options.password : "");
-            var layout = new android.widget.LinearLayout(context);
+            var layout = new android.widget.LinearLayout(context_1);
             layout.setOrientation(1);
             layout.addView(userNameInput_1);
             layout.addView(passwordInput_1);

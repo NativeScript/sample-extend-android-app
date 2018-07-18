@@ -1,26 +1,27 @@
+import { InjectionToken } from "@angular/core";
 import { Frame } from "tns-core-modules/ui/frame";
+import { View } from "tns-core-modules/ui/core/view";
 import { Page } from "tns-core-modules/ui/page";
-import { OpaqueToken } from "@angular/core";
 import { Device } from "tns-core-modules/platform";
-export declare const APP_ROOT_VIEW: OpaqueToken;
-export declare const DEVICE: OpaqueToken;
-export declare const PAGE_FACTORY: OpaqueToken;
+export declare const APP_ROOT_VIEW: InjectionToken<View>;
+export declare const DEVICE: InjectionToken<Device>;
+export declare const PAGE_FACTORY: InjectionToken<PageFactory>;
 export declare function setRootPage(page: Page): void;
 export declare function getRootPage(): Page;
 export declare function getDefaultPage(): Page;
 export declare const defaultPageProvider: {
     provide: typeof Page;
-    useFactory: () => Page;
+    useFactory: typeof getDefaultPage;
 };
 export declare function getDefaultFrame(): Frame;
 export declare const defaultFrameProvider: {
     provide: typeof Frame;
-    useFactory: () => Frame;
+    useFactory: typeof getDefaultFrame;
 };
 export declare function getDefaultDevice(): Device;
 export declare const defaultDeviceProvider: {
-    provide: OpaqueToken;
-    useFactory: () => Device;
+    provide: InjectionToken<Device>;
+    useFactory: typeof getDefaultDevice;
 };
 export declare type PageFactory = (options: PageFactoryOptions) => Page;
 export interface PageFactoryOptions {
@@ -32,6 +33,9 @@ export interface PageFactoryOptions {
 }
 export declare const defaultPageFactory: PageFactory;
 export declare const defaultPageFactoryProvider: {
-    provide: OpaqueToken;
+    provide: InjectionToken<PageFactory>;
     useValue: PageFactory;
 };
+export declare class FrameService {
+    getFrame(): Frame;
+}

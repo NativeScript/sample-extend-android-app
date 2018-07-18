@@ -1,5 +1,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var file_access_module = require("./file-system-access");
+var profiling_1 = require("../profiling");
 var fileAccess;
 var getFileAccess = function () {
     if (!fileAccess) {
@@ -13,17 +14,11 @@ function ensurePlatform() {
         platform = require("platform");
     }
 }
-var nameProperty = "_name";
-var pathProperty = "_path";
-var isKnownProperty = "_isKnown";
-var fileLockedProperty = "_locked";
-var extensionProperty = "_extension";
-var lastModifiedProperty = "_lastModified";
 var createFile = function (info) {
     var file = new File();
-    file[pathProperty] = info.path;
-    file[nameProperty] = info.name;
-    file[extensionProperty] = info.extension;
+    file._path = info.path;
+    file._name = info.name;
+    file._extension = info.extension;
     return file;
 };
 var createFolder = function (info) {
@@ -36,8 +31,8 @@ var createFolder = function (info) {
         return temp;
     }
     var folder = new Folder();
-    folder[pathProperty] = info.path;
-    folder[nameProperty] = info.name;
+    folder._path = info.path;
+    folder._name = info.name;
     return folder;
 };
 var FileSystemEntity = (function () {
@@ -72,7 +67,7 @@ var FileSystemEntity = (function () {
         });
     };
     FileSystemEntity.prototype.removeSync = function (onError) {
-        if (this[isKnownProperty]) {
+        if (this._isKnown) {
             if (onError) {
                 onError({ message: "Cannot delete known folder." });
             }
@@ -101,7 +96,7 @@ var FileSystemEntity = (function () {
         });
     };
     FileSystemEntity.prototype.renameSync = function (newName, onError) {
-        if (this[isKnownProperty]) {
+        if (this._isKnown) {
             if (onError) {
                 onError(new Error("Cannot rename known folder."));
             }
@@ -117,40 +112,38 @@ var FileSystemEntity = (function () {
         var fileAccess = getFileAccess();
         var path = parentFolder.path;
         var newPath = fileAccess.joinPath(path, newName);
-        var hasError = false;
         var localError = function (error) {
-            hasError = true;
             if (onError) {
                 onError(error);
             }
             return null;
         };
         fileAccess.rename(this.path, newPath, localError);
-        this[pathProperty] = newPath;
-        this[nameProperty] = newName;
+        this._path = newPath;
+        this._name = newName;
         if (this instanceof File) {
-            this[extensionProperty] = fileAccess.getFileExtension(newPath);
+            this._extension = fileAccess.getFileExtension(newPath);
         }
     };
     Object.defineProperty(FileSystemEntity.prototype, "name", {
         get: function () {
-            return this[nameProperty];
+            return this._name;
         },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(FileSystemEntity.prototype, "path", {
         get: function () {
-            return this[pathProperty];
+            return this._path;
         },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(FileSystemEntity.prototype, "lastModified", {
         get: function () {
-            var value = this[lastModifiedProperty];
-            if (!this[lastModifiedProperty]) {
-                value = this[lastModifiedProperty] = getFileAccess().getLastModified(this.path);
+            var value = this._lastModified;
+            if (!this._lastModified) {
+                value = this._lastModified = getFileAccess().getLastModified(this.path);
             }
             return value;
         },
@@ -180,39 +173,46 @@ var File = (function (_super) {
     };
     Object.defineProperty(File.prototype, "extension", {
         get: function () {
-            return this[extensionProperty];
+            return this._extension;
         },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(File.prototype, "isLocked", {
         get: function () {
-            return !!this[fileLockedProperty];
+            return !!this._locked;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(File.prototype, "size", {
+        get: function () {
+            return getFileAccess().getFileSize(this.path);
         },
         enumerable: true,
         configurable: true
     });
     File.prototype.readSync = function (onError) {
         this.checkAccess();
-        this[fileLockedProperty] = true;
+        this._locked = true;
         var that = this;
         var localError = function (error) {
-            that[fileLockedProperty] = false;
+            that._locked = false;
             if (onError) {
                 onError(error);
             }
         };
         var content = getFileAccess().read(this.path, localError);
-        this[fileLockedProperty] = false;
+        this._locked = false;
         return content;
     };
     File.prototype.writeSync = function (content, onError) {
         this.checkAccess();
         try {
-            this[fileLockedProperty] = true;
+            this._locked = true;
             var that = this;
             var localError = function (error) {
-                that[fileLockedProperty] = false;
+                that._locked = false;
                 if (onError) {
                     onError(error);
                 }
@@ -220,7 +220,7 @@ var File = (function (_super) {
             getFileAccess().write(this.path, content, localError);
         }
         finally {
-            this[fileLockedProperty] = false;
+            this._locked = false;
         }
     };
     File.prototype.readText = function (encoding) {
@@ -239,16 +239,16 @@ var File = (function (_super) {
     };
     File.prototype.readTextSync = function (onError, encoding) {
         this.checkAccess();
-        this[fileLockedProperty] = true;
+        this._locked = true;
         var that = this;
         var localError = function (error) {
-            that[fileLockedProperty] = false;
+            that._locked = false;
             if (onError) {
                 onError(error);
             }
         };
         var content = getFileAccess().readText(this.path, localError, encoding);
-        this[fileLockedProperty] = false;
+        this._locked = false;
         return content;
     };
     File.prototype.writeText = function (content, encoding) {
@@ -268,10 +268,10 @@ var File = (function (_super) {
     File.prototype.writeTextSync = function (content, onError, encoding) {
         this.checkAccess();
         try {
-            this[fileLockedProperty] = true;
+            this._locked = true;
             var that = this;
             var localError = function (error) {
-                that[fileLockedProperty] = false;
+                that._locked = false;
                 if (onError) {
                     onError(error);
                 }
@@ -279,7 +279,7 @@ var File = (function (_super) {
             getFileAccess().writeText(this.path, content, localError, encoding);
         }
         finally {
-            this[fileLockedProperty] = false;
+            this._locked = false;
         }
     };
     File.prototype.checkAccess = function () {
@@ -287,6 +287,9 @@ var File = (function (_super) {
             throw new Error("Cannot access a locked file.");
         }
     };
+    __decorate([
+        profiling_1.profile
+    ], File.prototype, "readTextSync", null);
     return File;
 }(FileSystemEntity));
 exports.File = File;
@@ -335,7 +338,7 @@ var Folder = (function (_super) {
     };
     Object.defineProperty(Folder.prototype, "isKnown", {
         get: function () {
-            return this[isKnownProperty];
+            return this._isKnown;
         },
         enumerable: true,
         configurable: true
@@ -426,8 +429,8 @@ var knownFolders;
         if (!_documents) {
             var path = getFileAccess().getDocumentsFolderPath();
             _documents = new Folder();
-            _documents[pathProperty] = path;
-            _documents[isKnownProperty] = true;
+            _documents._path = path;
+            _documents._isKnown = true;
         }
         return _documents;
     };
@@ -435,8 +438,8 @@ var knownFolders;
         if (!_temp) {
             var path = getFileAccess().getTempFolderPath();
             _temp = new Folder();
-            _temp[pathProperty] = path;
-            _temp[isKnownProperty] = true;
+            _temp._path = path;
+            _temp._isKnown = true;
         }
         return _temp;
     };
@@ -444,8 +447,8 @@ var knownFolders;
         if (!_app) {
             var path = getFileAccess().getCurrentAppPath();
             _app = new Folder();
-            _app[pathProperty] = path;
-            _app[isKnownProperty] = true;
+            _app._path = path;
+            _app._isKnown = true;
         }
         return _app;
     };
@@ -464,8 +467,8 @@ var knownFolders;
                 var existingFolderInfo = getExistingFolderInfo(5);
                 if (existingFolderInfo) {
                     _library = existingFolderInfo.folder;
-                    _library[pathProperty] = existingFolderInfo.path;
-                    _library[isKnownProperty] = true;
+                    _library._path = existingFolderInfo.path;
+                    _library._isKnown = true;
                 }
             }
             return _library;
@@ -477,8 +480,8 @@ var knownFolders;
                 var existingFolderInfo = getExistingFolderInfo(6);
                 if (existingFolderInfo) {
                     _developer = existingFolderInfo.folder;
-                    _developer[pathProperty] = existingFolderInfo.path;
-                    _developer[isKnownProperty] = true;
+                    _developer._path = existingFolderInfo.path;
+                    _developer._isKnown = true;
                 }
             }
             return _developer;
@@ -490,8 +493,8 @@ var knownFolders;
                 var existingFolderInfo = getExistingFolderInfo(12);
                 if (existingFolderInfo) {
                     _desktop = existingFolderInfo.folder;
-                    _desktop[pathProperty] = existingFolderInfo.path;
-                    _desktop[isKnownProperty] = true;
+                    _desktop._path = existingFolderInfo.path;
+                    _desktop._isKnown = true;
                 }
             }
             return _desktop;
@@ -503,8 +506,8 @@ var knownFolders;
                 var existingFolderInfo = getExistingFolderInfo(15);
                 if (existingFolderInfo) {
                     _downloads = existingFolderInfo.folder;
-                    _downloads[pathProperty] = existingFolderInfo.path;
-                    _downloads[isKnownProperty] = true;
+                    _downloads._path = existingFolderInfo.path;
+                    _downloads._isKnown = true;
                 }
             }
             return _downloads;
@@ -516,8 +519,8 @@ var knownFolders;
                 var existingFolderInfo = getExistingFolderInfo(17);
                 if (existingFolderInfo) {
                     _movies = existingFolderInfo.folder;
-                    _movies[pathProperty] = existingFolderInfo.path;
-                    _movies[isKnownProperty] = true;
+                    _movies._path = existingFolderInfo.path;
+                    _movies._isKnown = true;
                 }
             }
             return _movies;
@@ -529,8 +532,8 @@ var knownFolders;
                 var existingFolderInfo = getExistingFolderInfo(18);
                 if (existingFolderInfo) {
                     _music = existingFolderInfo.folder;
-                    _music[pathProperty] = existingFolderInfo.path;
-                    _music[isKnownProperty] = true;
+                    _music._path = existingFolderInfo.path;
+                    _music._isKnown = true;
                 }
             }
             return _music;
@@ -542,8 +545,8 @@ var knownFolders;
                 var existingFolderInfo = getExistingFolderInfo(19);
                 if (existingFolderInfo) {
                     _pictures = existingFolderInfo.folder;
-                    _pictures[pathProperty] = existingFolderInfo.path;
-                    _pictures[isKnownProperty] = true;
+                    _pictures._path = existingFolderInfo.path;
+                    _pictures._isKnown = true;
                 }
             }
             return _pictures;
@@ -555,8 +558,8 @@ var knownFolders;
                 var existingFolderInfo = getExistingFolderInfo(21);
                 if (existingFolderInfo) {
                     _sharedPublic = existingFolderInfo.folder;
-                    _sharedPublic[pathProperty] = existingFolderInfo.path;
-                    _sharedPublic[isKnownProperty] = true;
+                    _sharedPublic._path = existingFolderInfo.path;
+                    _sharedPublic._isKnown = true;
                 }
             }
             return _sharedPublic;

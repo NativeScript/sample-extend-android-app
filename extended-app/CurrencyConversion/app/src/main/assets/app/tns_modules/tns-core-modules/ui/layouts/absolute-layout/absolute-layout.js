@@ -6,7 +6,7 @@ var absolute_layout_common_1 = require("./absolute-layout-common");
 __export(require("./absolute-layout-common"));
 function makeNativeSetter(setter) {
     return function (value) {
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         var lp = nativeView.getLayoutParams() || new org.nativescript.widgets.CommonLayoutParams();
         if (lp instanceof org.nativescript.widgets.CommonLayoutParams) {
             setter.call(this, lp, value);

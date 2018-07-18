@@ -9,9 +9,13 @@ var SliderBase = (function (_super) {
     function SliderBase() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    SliderBase = __decorate([
+        view_1.CSSType("Slider")
+    ], SliderBase);
     return SliderBase;
 }(view_1.View));
 exports.SliderBase = SliderBase;
+SliderBase.prototype.recycleNativeView = "auto";
 exports.valueProperty = new view_1.CoercibleProperty({
     name: "value", defaultValue: 0, coerceValue: function (target, value) {
         value = Math.max(value, target.minValue);

@@ -8,18 +8,45 @@ function setNetwork(newNetwork) {
     network = newNetwork;
 }
 exports.setNetwork = setNetwork;
+var dom;
+function getDOM() {
+    return dom;
+}
+exports.getDOM = getDOM;
+function setDOM(newDOM) {
+    dom = newDOM;
+}
+exports.setDOM = setDOM;
+var css;
+function getCSS() {
+    return css;
+}
+exports.getCSS = getCSS;
+function setCSS(newCSS) {
+    css = newCSS;
+}
+exports.setCSS = setCSS;
 var NetworkAgent;
 (function (NetworkAgent) {
     function responseReceived(requestId, result, headers) {
         var requestIdStr = requestId.toString();
-        var mimeType = headers["Content-Type"] || headers["content-type"];
+        var mimeType = headers["Content-Type"] || headers["content-type"] || "application/octet-stream";
+        var contentLengthHeader = headers["Content-Length"] || headers["content-length"];
+        var contentLength = parseInt(contentLengthHeader, 10);
+        if (isNaN(contentLength)) {
+            contentLength = 0;
+        }
         var response = {
             url: result.url || "",
             status: result.statusCode,
             statusText: result.statusText || "",
             headers: headers,
             mimeType: mimeType,
-            fromDiskCache: false
+            fromDiskCache: false,
+            connectionReused: true,
+            connectionId: 0,
+            encodedDataLength: contentLength,
+            securityState: "info"
         };
         var responseData = {
             requestId: requestIdStr,
@@ -28,7 +55,11 @@ var NetworkAgent;
             timestamp: getTimeStamp()
         };
         global.__inspector.responseReceived(responseData);
-        global.__inspector.loadingFinished({ requestId: requestIdStr, timestamp: getTimeStamp() });
+        global.__inspector.loadingFinished({
+            requestId: requestIdStr,
+            timestamp: getTimeStamp(),
+            encodedDataLength: contentLength
+        });
         var hasTextContent = responseData.type === "Document" || responseData.type === "Script";
         var data;
         if (!hasTextContent) {
@@ -58,14 +89,17 @@ var NetworkAgent;
             url: options.url,
             method: options.method,
             headers: options.headers || {},
-            postData: options.content ? options.content.toString() : ""
+            postData: options.content ? options.content.toString() : "",
+            initialPriority: "Medium",
+            referrerPolicy: "no-referrer-when-downgrade"
         };
         var requestData = {
             requestId: requestId.toString(),
             url: request.url,
             request: request,
             timestamp: getTimeStamp(),
-            type: "Document"
+            type: "Document",
+            wallTime: 0
         };
         global.__inspector.requestWillBeSent(requestData);
     }

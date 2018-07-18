@@ -1,5 +1,4 @@
 Object.defineProperty(exports, "__esModule", { value: true });
-// Always import platform-common first - because polyfills
 var platform_common_1 = require("./platform-common");
 var core_1 = require("@angular/core");
 // "Static" platform

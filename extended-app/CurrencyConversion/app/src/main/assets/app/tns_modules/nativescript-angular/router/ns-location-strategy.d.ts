@@ -1,5 +1,7 @@
 import { LocationStrategy } from "@angular/common";
-import { Frame, NavigationTransition } from "tns-core-modules/ui/frame";
+import { UrlSegmentGroup } from "@angular/router";
+import { NavigationTransition } from "tns-core-modules/ui/frame";
+import { FrameService } from "../platform-providers";
 export interface NavigationOptions {
     clearHistory?: boolean;
     animated?: boolean;
@@ -8,17 +10,23 @@ export interface NavigationOptions {
 export interface LocationState {
     state: any;
     title: string;
-    url: string;
     queryParams: string;
+    segmentGroup: UrlSegmentGroup;
+    isRootSegmentGroup: boolean;
     isPageNavigation: boolean;
+    isModalNavigation: boolean;
 }
 export declare class NSLocationStrategy extends LocationStrategy {
-    private frame;
-    private states;
+    private frameService;
+    private statesByOutlet;
+    private currentUrlTree;
+    private currentOutlet;
     private popStateCallbacks;
     private _isPageNavigationBack;
     private _currentNavigationOptions;
-    constructor(frame: Frame);
+    _isModalClosing: boolean;
+    _isModalNavigation: boolean;
+    constructor(frameService: FrameService);
     path(): string;
     prepareExternalUrl(internal: string): string;
     pushState(state: any, title: string, url: string, queryParams: string): void;
@@ -30,12 +38,17 @@ export declare class NSLocationStrategy extends LocationStrategy {
     onPopState(fn: (_: any) => any): void;
     getBaseHref(): string;
     private callPopState(state, pop?);
-    private peekState();
+    private peekState(name);
     toString(): string;
-    _beginBackPageNavigation(): void;
+    _beginBackPageNavigation(name: string): void;
     _finishBackPageNavigation(): void;
     _isPageNavigatingBack(): boolean;
-    _beginPageNavigation(): NavigationOptions;
+    _beginModalNavigation(): void;
+    _beginCloseModalNavigation(): void;
+    _finishCloseModalNavigation(): void;
+    _beginPageNavigation(name: string): NavigationOptions;
     _setNavigationOptions(options: NavigationOptions): void;
-    _getStates(): Array<LocationState>;
+    _getStates(): {
+        [key: string]: Array<LocationState>;
+    };
 }

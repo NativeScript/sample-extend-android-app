@@ -8,6 +8,7 @@ if (global.TNS_WEBPACK) {
     global.registerModule("ui/button", function () { return require("ui/button"); });
     global.registerModule("ui/content-view", function () { return require("ui/content-view"); });
     global.registerModule("ui/date-picker", function () { return require("ui/date-picker"); });
+    global.registerModule("ui/frame", function () { return require("ui/frame"); });
     global.registerModule("ui/html-view", function () { return require("ui/html-view"); });
     global.registerModule("ui/image", function () { return require("ui/image"); });
     global.registerModule("ui/label", function () { return require("ui/label"); });
@@ -16,6 +17,7 @@ if (global.TNS_WEBPACK) {
     global.registerModule("ui/layouts/grid-layout", function () { return require("ui/layouts/grid-layout"); });
     global.registerModule("ui/layouts/stack-layout", function () { return require("ui/layouts/stack-layout"); });
     global.registerModule("ui/layouts/flexbox-layout", function () { return require("ui/layouts/flexbox-layout"); });
+    global.registerModule("ui/layouts/wrap-layout", function () { return require("ui/layouts/wrap-layout"); });
     global.registerModule("ui/list-picker", function () { return require("ui/list-picker"); });
     global.registerModule("ui/page", function () { return require("ui/page"); });
     global.registerModule("ui/placeholder", function () { return require("ui/placeholder"); });

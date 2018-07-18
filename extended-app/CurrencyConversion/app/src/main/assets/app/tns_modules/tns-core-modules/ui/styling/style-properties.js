@@ -1,11 +1,14 @@
 Object.defineProperty(exports, "__esModule", { value: true });
-var color_1 = require("../../color");
-var font_1 = require("./font");
-var utils_1 = require("../../utils/utils");
-var background_1 = require("./background");
-var platform_1 = require("../../platform");
-var style_1 = require("./style");
 var properties_1 = require("../core/properties");
+var color_1 = require("../../color");
+var font_1 = require("../../ui/styling/font");
+var utils_1 = require("../../utils/utils");
+var background_1 = require("../../ui/styling/background");
+var platform_1 = require("../../platform");
+var number_utils_1 = require("../../utils/number-utils");
+var matrix_1 = require("../../matrix");
+var parser = require("../../css/parser");
+var linear_gradient_1 = require("./linear-gradient");
 function equalsCommon(a, b) {
     if (a == "auto") {
         return b == "auto";
@@ -146,18 +149,18 @@ exports.minWidthProperty = new properties_1.CssProperty({
         target.view.effectiveMinWidth = Length.toDevicePixels(newValue, 0);
     }, valueConverter: Length.parse
 });
-exports.minWidthProperty.register(style_1.Style);
+exports.minWidthProperty.register(properties_1.Style);
 exports.minHeightProperty = new properties_1.CssProperty({
     name: "minHeight", cssName: "min-height", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals,
     valueChanged: function (target, oldValue, newValue) {
         target.view.effectiveMinHeight = Length.toDevicePixels(newValue, 0);
     }, valueConverter: Length.parse
 });
-exports.minHeightProperty.register(style_1.Style);
+exports.minHeightProperty.register(properties_1.Style);
 exports.widthProperty = new properties_1.CssProperty({ name: "width", cssName: "width", defaultValue: "auto", affectsLayout: platform_1.isIOS, equalityComparer: Length.equals, valueConverter: PercentLength.parse });
-exports.widthProperty.register(style_1.Style);
+exports.widthProperty.register(properties_1.Style);
 exports.heightProperty = new properties_1.CssProperty({ name: "height", cssName: "height", defaultValue: "auto", affectsLayout: platform_1.isIOS, equalityComparer: Length.equals, valueConverter: PercentLength.parse });
-exports.heightProperty.register(style_1.Style);
+exports.heightProperty.register(properties_1.Style);
 var marginProperty = new properties_1.ShorthandProperty({
     name: "margin", cssName: "margin",
     getter: function () {
@@ -170,15 +173,15 @@ var marginProperty = new properties_1.ShorthandProperty({
     },
     converter: convertToMargins
 });
-marginProperty.register(style_1.Style);
+marginProperty.register(properties_1.Style);
 exports.marginLeftProperty = new properties_1.CssProperty({ name: "marginLeft", cssName: "margin-left", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals, valueConverter: PercentLength.parse });
-exports.marginLeftProperty.register(style_1.Style);
+exports.marginLeftProperty.register(properties_1.Style);
 exports.marginRightProperty = new properties_1.CssProperty({ name: "marginRight", cssName: "margin-right", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals, valueConverter: PercentLength.parse });
-exports.marginRightProperty.register(style_1.Style);
+exports.marginRightProperty.register(properties_1.Style);
 exports.marginTopProperty = new properties_1.CssProperty({ name: "marginTop", cssName: "margin-top", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals, valueConverter: PercentLength.parse });
-exports.marginTopProperty.register(style_1.Style);
+exports.marginTopProperty.register(properties_1.Style);
 exports.marginBottomProperty = new properties_1.CssProperty({ name: "marginBottom", cssName: "margin-bottom", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals, valueConverter: PercentLength.parse });
-exports.marginBottomProperty.register(style_1.Style);
+exports.marginBottomProperty.register(properties_1.Style);
 var paddingProperty = new properties_1.ShorthandProperty({
     name: "padding", cssName: "padding",
     getter: function () {
@@ -191,35 +194,35 @@ var paddingProperty = new properties_1.ShorthandProperty({
     },
     converter: convertToPaddings
 });
-paddingProperty.register(style_1.Style);
+paddingProperty.register(properties_1.Style);
 exports.paddingLeftProperty = new properties_1.CssProperty({
     name: "paddingLeft", cssName: "padding-left", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals,
     valueChanged: function (target, oldValue, newValue) {
         target.view.effectivePaddingLeft = Length.toDevicePixels(newValue, 0);
     }, valueConverter: Length.parse
 });
-exports.paddingLeftProperty.register(style_1.Style);
+exports.paddingLeftProperty.register(properties_1.Style);
 exports.paddingRightProperty = new properties_1.CssProperty({
     name: "paddingRight", cssName: "padding-right", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals,
     valueChanged: function (target, oldValue, newValue) {
         target.view.effectivePaddingRight = Length.toDevicePixels(newValue, 0);
     }, valueConverter: Length.parse
 });
-exports.paddingRightProperty.register(style_1.Style);
+exports.paddingRightProperty.register(properties_1.Style);
 exports.paddingTopProperty = new properties_1.CssProperty({
     name: "paddingTop", cssName: "padding-top", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals,
     valueChanged: function (target, oldValue, newValue) {
         target.view.effectivePaddingTop = Length.toDevicePixels(newValue, 0);
     }, valueConverter: Length.parse
 });
-exports.paddingTopProperty.register(style_1.Style);
+exports.paddingTopProperty.register(properties_1.Style);
 exports.paddingBottomProperty = new properties_1.CssProperty({
     name: "paddingBottom", cssName: "padding-bottom", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals,
     valueChanged: function (target, oldValue, newValue) {
         target.view.effectivePaddingBottom = Length.toDevicePixels(newValue, 0);
     }, valueConverter: Length.parse
 });
-exports.paddingBottomProperty.register(style_1.Style);
+exports.paddingBottomProperty.register(properties_1.Style);
 var HorizontalAlignment;
 (function (HorizontalAlignment) {
     HorizontalAlignment.LEFT = "left";
@@ -230,7 +233,7 @@ var HorizontalAlignment;
     HorizontalAlignment.parse = properties_1.makeParser(HorizontalAlignment.isValid);
 })(HorizontalAlignment = exports.HorizontalAlignment || (exports.HorizontalAlignment = {}));
 exports.horizontalAlignmentProperty = new properties_1.CssProperty({ name: "horizontalAlignment", cssName: "horizontal-align", defaultValue: HorizontalAlignment.STRETCH, affectsLayout: platform_1.isIOS, valueConverter: HorizontalAlignment.parse });
-exports.horizontalAlignmentProperty.register(style_1.Style);
+exports.horizontalAlignmentProperty.register(properties_1.Style);
 var VerticalAlignment;
 (function (VerticalAlignment) {
     VerticalAlignment.TOP = "top";
@@ -242,7 +245,7 @@ var VerticalAlignment;
     var parseStrict = properties_1.makeParser(VerticalAlignment.isValid);
 })(VerticalAlignment = exports.VerticalAlignment || (exports.VerticalAlignment = {}));
 exports.verticalAlignmentProperty = new properties_1.CssProperty({ name: "verticalAlignment", cssName: "vertical-align", defaultValue: VerticalAlignment.STRETCH, affectsLayout: platform_1.isIOS, valueConverter: VerticalAlignment.parse });
-exports.verticalAlignmentProperty.register(style_1.Style);
+exports.verticalAlignmentProperty.register(properties_1.Style);
 function parseThickness(value) {
     if (typeof value === "string") {
         var arr = value.split(/[ ,]+/);
@@ -327,11 +330,11 @@ function convertToPaddings(value) {
     }
 }
 exports.rotateProperty = new properties_1.CssAnimationProperty({ name: "rotate", cssName: "rotate", defaultValue: 0, valueConverter: parseFloat });
-exports.rotateProperty.register(style_1.Style);
+exports.rotateProperty.register(properties_1.Style);
 exports.scaleXProperty = new properties_1.CssAnimationProperty({ name: "scaleX", cssName: "scaleX", defaultValue: 1, valueConverter: parseFloat });
-exports.scaleXProperty.register(style_1.Style);
+exports.scaleXProperty.register(properties_1.Style);
 exports.scaleYProperty = new properties_1.CssAnimationProperty({ name: "scaleY", cssName: "scaleY", defaultValue: 1, valueConverter: parseFloat });
-exports.scaleYProperty.register(style_1.Style);
+exports.scaleYProperty.register(properties_1.Style);
 function parseDIPs(value) {
     if (value.indexOf("px") !== -1) {
         return utils_1.layout.toDeviceIndependentPixels(parseFloat(value.replace("px", "").trim()));
@@ -341,9 +344,9 @@ function parseDIPs(value) {
     }
 }
 exports.translateXProperty = new properties_1.CssAnimationProperty({ name: "translateX", cssName: "translateX", defaultValue: 0, valueConverter: parseDIPs });
-exports.translateXProperty.register(style_1.Style);
+exports.translateXProperty.register(properties_1.Style);
 exports.translateYProperty = new properties_1.CssAnimationProperty({ name: "translateY", cssName: "translateY", defaultValue: 0, valueConverter: parseDIPs });
-exports.translateYProperty.register(style_1.Style);
+exports.translateYProperty.register(properties_1.Style);
 var transformProperty = new properties_1.ShorthandProperty({
     name: "transform", cssName: "transform",
     getter: function () {
@@ -366,117 +369,149 @@ var transformProperty = new properties_1.ShorthandProperty({
     },
     converter: convertToTransform
 });
-transformProperty.register(style_1.Style);
-function transformConverter(value) {
-    if (value.indexOf("none") !== -1) {
-        var operations_1 = {};
-        operations_1[value] = value;
-        return operations_1;
-    }
-    var operations = {};
-    var operator = "";
-    var pos = 0;
-    while (pos < value.length) {
-        if (value[pos] === " " || value[pos] === ",") {
-            pos++;
-        }
-        else if (value[pos] === "(") {
-            var start = pos + 1;
-            while (pos < value.length && value[pos] !== ")") {
-                pos++;
-            }
-            var operand = value.substring(start, pos);
-            operations[operator] = operand.trim();
-            operator = "";
-            pos++;
-        }
-        else {
-            operator += value[pos++];
-        }
-    }
-    return operations;
-}
+transformProperty.register(properties_1.Style);
+var IDENTITY_TRANSFORMATION = {
+    translate: { x: 0, y: 0 },
+    rotate: 0,
+    scale: { x: 1, y: 1 },
+};
+var TRANSFORM_SPLITTER = new RegExp(/\s*(.+?)\((.*?)\)/g);
+var TRANSFORMATIONS = Object.freeze([
+    "rotate",
+    "translate",
+    "translate3d",
+    "translateX",
+    "translateY",
+    "scale",
+    "scale3d",
+    "scaleX",
+    "scaleY",
+]);
+var STYLE_TRANSFORMATION_MAP = Object.freeze({
+    "scale": function (value) { return ({ property: "scale", value: value }); },
+    "scale3d": function (value) { return ({ property: "scale", value: value }); },
+    "scaleX": function (_a) {
+        var x = _a.x;
+        return ({ property: "scale", value: { x: x, y: IDENTITY_TRANSFORMATION.scale.y } });
+    },
+    "scaleY": function (_a) {
+        var y = _a.y;
+        return ({ property: "scale", value: { y: y, x: IDENTITY_TRANSFORMATION.scale.x } });
+    },
+    "translate": function (value) { return ({ property: "translate", value: value }); },
+    "translate3d": function (value) { return ({ property: "translate", value: value }); },
+    "translateX": function (_a) {
+        var x = _a.x;
+        return ({ property: "translate", value: { x: x, y: IDENTITY_TRANSFORMATION.translate.y } });
+    },
+    "translateY": function (_a) {
+        var y = _a.y;
+        return ({ property: "translate", value: { y: y, x: IDENTITY_TRANSFORMATION.translate.x } });
+    },
+    "rotate": function (value) { return ({ property: "rotate", value: value }); },
+});
 function convertToTransform(value) {
-    var newTransform = value === properties_1.unsetValue ? { "none": "none" } : transformConverter(value);
-    var array = [];
-    var values;
-    for (var transform in newTransform) {
-        switch (transform) {
-            case "scaleX":
-                array.push([exports.scaleXProperty, newTransform[transform]]);
-                break;
-            case "scaleY":
-                array.push([exports.scaleYProperty, newTransform[transform]]);
-                break;
-            case "scale":
-            case "scale3d":
-                values = newTransform[transform].split(",");
-                if (values.length >= 2) {
-                    array.push([exports.scaleXProperty, values[0]]);
-                    array.push([exports.scaleYProperty, values[1]]);
-                }
-                else if (values.length === 1) {
-                    array.push([exports.scaleXProperty, values[0]]);
-                    array.push([exports.scaleYProperty, values[0]]);
-                }
-                break;
-            case "translateX":
-                array.push([exports.translateXProperty, newTransform[transform]]);
-                break;
-            case "translateY":
-                array.push([exports.translateYProperty, newTransform[transform]]);
-                break;
-            case "translate":
-            case "translate3d":
-                values = newTransform[transform].split(",");
-                if (values.length >= 2) {
-                    array.push([exports.translateXProperty, values[0]]);
-                    array.push([exports.translateYProperty, values[1]]);
-                }
-                else if (values.length === 1) {
-                    array.push([exports.translateXProperty, values[0]]);
-                    array.push([exports.translateYProperty, values[0]]);
-                }
-                break;
-            case "rotate":
-                var text = newTransform[transform];
-                var val = parseFloat(text);
-                if (text.slice(-3) === "rad") {
-                    val = val * (180.0 / Math.PI);
-                }
-                array.push([exports.rotateProperty, val]);
-                break;
-            case "none":
-                array.push([exports.scaleXProperty, 1]);
-                array.push([exports.scaleYProperty, 1]);
-                array.push([exports.translateXProperty, 0]);
-                array.push([exports.translateYProperty, 0]);
-                array.push([exports.rotateProperty, 0]);
-                break;
+    if (value === properties_1.unsetValue) {
+        value = "none";
+    }
+    var _a = transformConverter(value), translate = _a.translate, rotate = _a.rotate, scale = _a.scale;
+    return [
+        [exports.translateXProperty, translate.x],
+        [exports.translateYProperty, translate.y],
+        [exports.scaleXProperty, scale.x],
+        [exports.scaleYProperty, scale.y],
+        [exports.rotateProperty, rotate],
+    ];
+}
+function transformConverter(text) {
+    var transformations = parseTransformString(text);
+    if (text === "none" || text === "" || !transformations.length) {
+        return IDENTITY_TRANSFORMATION;
+    }
+    var usedTransforms = transformations.map(function (t) { return t.property; });
+    if (!utils_1.hasDuplicates(usedTransforms)) {
+        var fullTransformations_1 = Object.assign({}, IDENTITY_TRANSFORMATION);
+        transformations.forEach(function (transform) {
+            fullTransformations_1[transform.property] = transform.value;
+        });
+        return fullTransformations_1;
+    }
+    var affineMatrix = transformations
+        .map(matrix_1.getTransformMatrix)
+        .reduce(matrix_1.multiplyAffine2d);
+    var cssMatrix = matrix_1.matrixArrayToCssMatrix(affineMatrix);
+    return matrix_1.decompose2DTransformMatrix(cssMatrix);
+}
+exports.transformConverter = transformConverter;
+function parseTransformString(text) {
+    var matches = [];
+    var match;
+    while ((match = TRANSFORM_SPLITTER.exec(text)) !== null) {
+        var property = match[1];
+        var value = convertTransformValue(property, match[2]);
+        if (TRANSFORMATIONS.indexOf(property) !== -1) {
+            matches.push(normalizeTransformation({ property: property, value: value }));
         }
     }
-    return array;
+    return matches;
 }
+function normalizeTransformation(_a) {
+    var property = _a.property, value = _a.value;
+    return STYLE_TRANSFORMATION_MAP[property](value);
+}
+function convertTransformValue(property, stringValue) {
+    var _a = stringValue.split(",").map(parseFloat), x = _a[0], _b = _a[1], y = _b === void 0 ? x : _b;
+    if (property === "rotate") {
+        return stringValue.slice(-3) === "rad" ? number_utils_1.radiansToDegrees(x) : x;
+    }
+    return { x: x, y: y };
+}
+var backgroundProperty = new properties_1.ShorthandProperty({
+    name: "background", cssName: "background",
+    getter: function () {
+        return this.backgroundColor + " " + this.backgroundImage + " " + this.backgroundRepeat + " " + this.backgroundPosition;
+    },
+    converter: convertToBackgrounds
+});
+backgroundProperty.register(properties_1.Style);
 exports.backgroundInternalProperty = new properties_1.CssProperty({
     name: "backgroundInternal",
     cssName: "_backgroundInternal",
     defaultValue: background_1.Background.default
 });
-exports.backgroundInternalProperty.register(style_1.Style);
+exports.backgroundInternalProperty.register(properties_1.Style);
 exports.backgroundImageProperty = new properties_1.CssProperty({
     name: "backgroundImage", cssName: "background-image", valueChanged: function (target, oldValue, newValue) {
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withImage(newValue);
+        var background = target.backgroundInternal.withImage(newValue);
+        target.backgroundInternal = background;
+    },
+    equalityComparer: function (value1, value2) {
+        if (value1 instanceof linear_gradient_1.LinearGradient && value2 instanceof linear_gradient_1.LinearGradient) {
+            return linear_gradient_1.LinearGradient.equals(value1, value2);
+        }
+        else {
+            return value1 === value2;
+        }
+    },
+    valueConverter: function (value) {
+        if (typeof value === "string") {
+            var parsed = parser.parseBackground(value);
+            if (parsed) {
+                var background = parsed.value;
+                value = (typeof background.image === "object") ? linear_gradient_1.LinearGradient.parse(background.image) : value;
+            }
+        }
+        return value;
     }
 });
-exports.backgroundImageProperty.register(style_1.Style);
+exports.backgroundImageProperty.register(properties_1.Style);
 exports.backgroundColorProperty = new properties_1.CssAnimationProperty({
     name: "backgroundColor", cssName: "background-color", valueChanged: function (target, oldValue, newValue) {
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withColor(newValue);
+        var background = target.backgroundInternal.withColor(newValue);
+        target.backgroundInternal = background;
     }, equalityComparer: color_1.Color.equals, valueConverter: function (value) { return new color_1.Color(value); }
 });
-exports.backgroundColorProperty.register(style_1.Style);
+exports.backgroundColorProperty.register(properties_1.Style);
 var BackgroundRepeat;
 (function (BackgroundRepeat) {
     BackgroundRepeat.REPEAT = "repeat";
@@ -489,25 +524,54 @@ var BackgroundRepeat;
 exports.backgroundRepeatProperty = new properties_1.CssProperty({
     name: "backgroundRepeat", cssName: "background-repeat", valueConverter: BackgroundRepeat.parse,
     valueChanged: function (target, oldValue, newValue) {
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withRepeat(newValue);
+        var background = target.backgroundInternal.withRepeat(newValue);
+        target.backgroundInternal = background;
     }
 });
-exports.backgroundRepeatProperty.register(style_1.Style);
+exports.backgroundRepeatProperty.register(properties_1.Style);
 exports.backgroundSizeProperty = new properties_1.CssProperty({
     name: "backgroundSize", cssName: "background-size", valueChanged: function (target, oldValue, newValue) {
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withSize(newValue);
+        var background = target.backgroundInternal.withSize(newValue);
+        target.backgroundInternal = background;
     }
 });
-exports.backgroundSizeProperty.register(style_1.Style);
+exports.backgroundSizeProperty.register(properties_1.Style);
 exports.backgroundPositionProperty = new properties_1.CssProperty({
     name: "backgroundPosition", cssName: "background-position", valueChanged: function (target, oldValue, newValue) {
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withPosition(newValue);
+        var background = target.backgroundInternal.withPosition(newValue);
+        target.backgroundInternal = background;
     }
 });
-exports.backgroundPositionProperty.register(style_1.Style);
+exports.backgroundPositionProperty.register(properties_1.Style);
+function convertToBackgrounds(value) {
+    if (typeof value === "string") {
+        var backgrounds = parser.parseBackground(value).value;
+        var backgroundColor = backgrounds.color ? new color_1.Color(backgrounds.color) : properties_1.unsetValue;
+        var backgroundImage = void 0;
+        if (typeof backgrounds.image === "object" && backgrounds.image) {
+            backgroundImage = linear_gradient_1.LinearGradient.parse(backgrounds.image);
+        }
+        else {
+            backgroundImage = backgrounds.image || properties_1.unsetValue;
+        }
+        var backgroundRepeat = backgrounds.repeat || properties_1.unsetValue;
+        var backgroundPosition = backgrounds.position ? backgrounds.position.text : properties_1.unsetValue;
+        return [
+            [exports.backgroundColorProperty, backgroundColor],
+            [exports.backgroundImageProperty, backgroundImage],
+            [exports.backgroundRepeatProperty, backgroundRepeat],
+            [exports.backgroundPositionProperty, backgroundPosition]
+        ];
+    }
+    else {
+        return [
+            [exports.backgroundColorProperty, properties_1.unsetValue],
+            [exports.backgroundImageProperty, properties_1.unsetValue],
+            [exports.backgroundRepeatProperty, properties_1.unsetValue],
+            [exports.backgroundPositionProperty, properties_1.unsetValue]
+        ];
+    }
+}
 function parseBorderColor(value) {
     var result = { top: undefined, right: undefined, bottom: undefined, left: undefined };
     if (value.indexOf("rgb") === 0) {
@@ -586,35 +650,35 @@ var borderColorProperty = new properties_1.ShorthandProperty({
         }
     }
 });
-borderColorProperty.register(style_1.Style);
+borderColorProperty.register(properties_1.Style);
 exports.borderTopColorProperty = new properties_1.CssProperty({
     name: "borderTopColor", cssName: "border-top-color", valueChanged: function (target, oldValue, newValue) {
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderTopColor(newValue);
+        var background = target.backgroundInternal.withBorderTopColor(newValue);
+        target.backgroundInternal = background;
     }, equalityComparer: color_1.Color.equals, valueConverter: function (value) { return new color_1.Color(value); }
 });
-exports.borderTopColorProperty.register(style_1.Style);
+exports.borderTopColorProperty.register(properties_1.Style);
 exports.borderRightColorProperty = new properties_1.CssProperty({
     name: "borderRightColor", cssName: "border-right-color", valueChanged: function (target, oldValue, newValue) {
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderRightColor(newValue);
+        var background = target.backgroundInternal.withBorderRightColor(newValue);
+        target.backgroundInternal = background;
     }, equalityComparer: color_1.Color.equals, valueConverter: function (value) { return new color_1.Color(value); }
 });
-exports.borderRightColorProperty.register(style_1.Style);
+exports.borderRightColorProperty.register(properties_1.Style);
 exports.borderBottomColorProperty = new properties_1.CssProperty({
     name: "borderBottomColor", cssName: "border-bottom-color", valueChanged: function (target, oldValue, newValue) {
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderBottomColor(newValue);
+        var background = target.backgroundInternal.withBorderBottomColor(newValue);
+        target.backgroundInternal = background;
     }, equalityComparer: color_1.Color.equals, valueConverter: function (value) { return new color_1.Color(value); }
 });
-exports.borderBottomColorProperty.register(style_1.Style);
+exports.borderBottomColorProperty.register(properties_1.Style);
 exports.borderLeftColorProperty = new properties_1.CssProperty({
     name: "borderLeftColor", cssName: "border-left-color", valueChanged: function (target, oldValue, newValue) {
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderLeftColor(newValue);
+        var background = target.backgroundInternal.withBorderLeftColor(newValue);
+        target.backgroundInternal = background;
     }, equalityComparer: color_1.Color.equals, valueConverter: function (value) { return new color_1.Color(value); }
 });
-exports.borderLeftColorProperty.register(style_1.Style);
+exports.borderLeftColorProperty.register(properties_1.Style);
 var borderWidthProperty = new properties_1.ShorthandProperty({
     name: "borderWidth", cssName: "border-width",
     getter: function () {
@@ -647,7 +711,7 @@ var borderWidthProperty = new properties_1.ShorthandProperty({
         }
     }
 });
-borderWidthProperty.register(style_1.Style);
+borderWidthProperty.register(properties_1.Style);
 exports.borderTopWidthProperty = new properties_1.CssProperty({
     name: "borderTopWidth", cssName: "border-top-width", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals,
     valueChanged: function (target, oldValue, newValue) {
@@ -656,11 +720,11 @@ exports.borderTopWidthProperty = new properties_1.CssProperty({
             throw new Error("border-top-width should be Non-Negative Finite number. Value: " + value);
         }
         target.view.effectiveBorderTopWidth = value;
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderTopWidth(value);
+        var background = target.backgroundInternal.withBorderTopWidth(value);
+        target.backgroundInternal = background;
     }, valueConverter: Length.parse
 });
-exports.borderTopWidthProperty.register(style_1.Style);
+exports.borderTopWidthProperty.register(properties_1.Style);
 exports.borderRightWidthProperty = new properties_1.CssProperty({
     name: "borderRightWidth", cssName: "border-right-width", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals,
     valueChanged: function (target, oldValue, newValue) {
@@ -669,11 +733,11 @@ exports.borderRightWidthProperty = new properties_1.CssProperty({
             throw new Error("border-right-width should be Non-Negative Finite number. Value: " + value);
         }
         target.view.effectiveBorderRightWidth = value;
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderRightWidth(value);
+        var background = target.backgroundInternal.withBorderRightWidth(value);
+        target.backgroundInternal = background;
     }, valueConverter: Length.parse
 });
-exports.borderRightWidthProperty.register(style_1.Style);
+exports.borderRightWidthProperty.register(properties_1.Style);
 exports.borderBottomWidthProperty = new properties_1.CssProperty({
     name: "borderBottomWidth", cssName: "border-bottom-width", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals,
     valueChanged: function (target, oldValue, newValue) {
@@ -682,11 +746,11 @@ exports.borderBottomWidthProperty = new properties_1.CssProperty({
             throw new Error("border-bottom-width should be Non-Negative Finite number. Value: " + value);
         }
         target.view.effectiveBorderBottomWidth = value;
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderBottomWidth(value);
+        var background = target.backgroundInternal.withBorderBottomWidth(value);
+        target.backgroundInternal = background;
     }, valueConverter: Length.parse
 });
-exports.borderBottomWidthProperty.register(style_1.Style);
+exports.borderBottomWidthProperty.register(properties_1.Style);
 exports.borderLeftWidthProperty = new properties_1.CssProperty({
     name: "borderLeftWidth", cssName: "border-left-width", defaultValue: exports.zeroLength, affectsLayout: platform_1.isIOS, equalityComparer: Length.equals,
     valueChanged: function (target, oldValue, newValue) {
@@ -695,11 +759,11 @@ exports.borderLeftWidthProperty = new properties_1.CssProperty({
             throw new Error("border-left-width should be Non-Negative Finite number. Value: " + value);
         }
         target.view.effectiveBorderLeftWidth = value;
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderLeftWidth(value);
+        var background = target.backgroundInternal.withBorderLeftWidth(value);
+        target.backgroundInternal = background;
     }, valueConverter: Length.parse
 });
-exports.borderLeftWidthProperty.register(style_1.Style);
+exports.borderLeftWidthProperty.register(properties_1.Style);
 var borderRadiusProperty = new properties_1.ShorthandProperty({
     name: "borderRadius", cssName: "border-radius",
     getter: function () {
@@ -730,51 +794,51 @@ var borderRadiusProperty = new properties_1.ShorthandProperty({
         }
     }
 });
-borderRadiusProperty.register(style_1.Style);
+borderRadiusProperty.register(properties_1.Style);
 exports.borderTopLeftRadiusProperty = new properties_1.CssProperty({
     name: "borderTopLeftRadius", cssName: "border-top-left-radius", defaultValue: 0, affectsLayout: platform_1.isIOS, valueChanged: function (target, oldValue, newValue) {
         var value = Length.toDevicePixels(newValue, 0);
         if (!isNonNegativeFiniteNumber(value)) {
             throw new Error("border-top-left-radius should be Non-Negative Finite number. Value: " + value);
         }
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderTopLeftRadius(value);
+        var background = target.backgroundInternal.withBorderTopLeftRadius(value);
+        target.backgroundInternal = background;
     }, valueConverter: Length.parse
 });
-exports.borderTopLeftRadiusProperty.register(style_1.Style);
+exports.borderTopLeftRadiusProperty.register(properties_1.Style);
 exports.borderTopRightRadiusProperty = new properties_1.CssProperty({
     name: "borderTopRightRadius", cssName: "border-top-right-radius", defaultValue: 0, affectsLayout: platform_1.isIOS, valueChanged: function (target, oldValue, newValue) {
         var value = Length.toDevicePixels(newValue, 0);
         if (!isNonNegativeFiniteNumber(value)) {
             throw new Error("border-top-right-radius should be Non-Negative Finite number. Value: " + value);
         }
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderTopRightRadius(value);
+        var background = target.backgroundInternal.withBorderTopRightRadius(value);
+        target.backgroundInternal = background;
     }, valueConverter: Length.parse
 });
-exports.borderTopRightRadiusProperty.register(style_1.Style);
+exports.borderTopRightRadiusProperty.register(properties_1.Style);
 exports.borderBottomRightRadiusProperty = new properties_1.CssProperty({
     name: "borderBottomRightRadius", cssName: "border-bottom-right-radius", defaultValue: 0, affectsLayout: platform_1.isIOS, valueChanged: function (target, oldValue, newValue) {
         var value = Length.toDevicePixels(newValue, 0);
         if (!isNonNegativeFiniteNumber(value)) {
             throw new Error("border-bottom-right-radius should be Non-Negative Finite number. Value: " + value);
         }
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderBottomRightRadius(value);
+        var background = target.backgroundInternal.withBorderBottomRightRadius(value);
+        target.backgroundInternal = background;
     }, valueConverter: Length.parse
 });
-exports.borderBottomRightRadiusProperty.register(style_1.Style);
+exports.borderBottomRightRadiusProperty.register(properties_1.Style);
 exports.borderBottomLeftRadiusProperty = new properties_1.CssProperty({
     name: "borderBottomLeftRadius", cssName: "border-bottom-left-radius", defaultValue: 0, affectsLayout: platform_1.isIOS, valueChanged: function (target, oldValue, newValue) {
         var value = Length.toDevicePixels(newValue, 0);
         if (!isNonNegativeFiniteNumber(value)) {
             throw new Error("border-bottom-left-radius should be Non-Negative Finite number. Value: " + value);
         }
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withBorderBottomLeftRadius(value);
+        var background = target.backgroundInternal.withBorderBottomLeftRadius(value);
+        target.backgroundInternal = background;
     }, valueConverter: Length.parse
 });
-exports.borderBottomLeftRadiusProperty.register(style_1.Style);
+exports.borderBottomLeftRadiusProperty.register(properties_1.Style);
 function isNonNegativeFiniteNumber(value) {
     return isFinite(value) && !isNaN(value) && value >= 0;
 }
@@ -791,11 +855,11 @@ exports.clipPathProperty = new properties_1.CssProperty({
         if (!isClipPathValid(newValue)) {
             throw new Error("clip-path is not valid.");
         }
-        var background = target.backgroundInternal;
-        target.backgroundInternal = background.withClipPath(newValue);
+        var background = target.backgroundInternal.withClipPath(newValue);
+        target.backgroundInternal = background;
     }
 });
-exports.clipPathProperty.register(style_1.Style);
+exports.clipPathProperty.register(properties_1.Style);
 function isFloatValueConverter(value) {
     var newValue = parseFloat(value);
     if (isNaN(newValue)) {
@@ -803,8 +867,8 @@ function isFloatValueConverter(value) {
     }
     return newValue;
 }
-exports.zIndexProperty = new properties_1.CssProperty({ name: "zIndex", cssName: "z-index", defaultValue: Number.NaN, valueConverter: isFloatValueConverter });
-exports.zIndexProperty.register(style_1.Style);
+exports.zIndexProperty = new properties_1.CssProperty({ name: "zIndex", cssName: "z-index", valueConverter: isFloatValueConverter });
+exports.zIndexProperty.register(properties_1.Style);
 function opacityConverter(value) {
     var newValue = parseFloat(value);
     if (!isNaN(newValue) && 0 <= newValue && newValue <= 1) {
@@ -813,11 +877,11 @@ function opacityConverter(value) {
     throw new Error("Opacity should be between [0, 1]. Value: " + newValue);
 }
 exports.opacityProperty = new properties_1.CssAnimationProperty({ name: "opacity", cssName: "opacity", defaultValue: 1, valueConverter: opacityConverter });
-exports.opacityProperty.register(style_1.Style);
+exports.opacityProperty.register(properties_1.Style);
 exports.colorProperty = new properties_1.InheritedCssProperty({ name: "color", cssName: "color", equalityComparer: color_1.Color.equals, valueConverter: function (v) { return new color_1.Color(v); } });
-exports.colorProperty.register(style_1.Style);
+exports.colorProperty.register(properties_1.Style);
 exports.fontInternalProperty = new properties_1.CssProperty({ name: "fontInternal", cssName: "_fontInternal", defaultValue: font_1.Font.default });
-exports.fontInternalProperty.register(style_1.Style);
+exports.fontInternalProperty.register(properties_1.Style);
 exports.fontFamilyProperty = new properties_1.InheritedCssProperty({
     name: "fontFamily", cssName: "font-family", affectsLayout: platform_1.isIOS, valueChanged: function (target, oldValue, newValue) {
         var currentFont = target.fontInternal;
@@ -827,7 +891,7 @@ exports.fontFamilyProperty = new properties_1.InheritedCssProperty({
         }
     }
 });
-exports.fontFamilyProperty.register(style_1.Style);
+exports.fontFamilyProperty.register(properties_1.Style);
 exports.fontSizeProperty = new properties_1.InheritedCssProperty({
     name: "fontSize", cssName: "font-size", affectsLayout: platform_1.isIOS, valueChanged: function (target, oldValue, newValue) {
         var currentFont = target.fontInternal;
@@ -838,7 +902,7 @@ exports.fontSizeProperty = new properties_1.InheritedCssProperty({
     },
     valueConverter: function (v) { return parseFloat(v); }
 });
-exports.fontSizeProperty.register(style_1.Style);
+exports.fontSizeProperty.register(properties_1.Style);
 exports.fontStyleProperty = new properties_1.InheritedCssProperty({
     name: "fontStyle", cssName: "font-style", affectsLayout: platform_1.isIOS, defaultValue: font_1.FontStyle.NORMAL, valueConverter: font_1.FontStyle.parse, valueChanged: function (target, oldValue, newValue) {
         var currentFont = target.fontInternal;
@@ -848,7 +912,7 @@ exports.fontStyleProperty = new properties_1.InheritedCssProperty({
         }
     }
 });
-exports.fontStyleProperty.register(style_1.Style);
+exports.fontStyleProperty.register(properties_1.Style);
 exports.fontWeightProperty = new properties_1.InheritedCssProperty({
     name: "fontWeight", cssName: "font-weight", affectsLayout: platform_1.isIOS, defaultValue: font_1.FontWeight.NORMAL, valueConverter: font_1.FontWeight.parse, valueChanged: function (target, oldValue, newValue) {
         var currentFont = target.fontInternal;
@@ -858,7 +922,7 @@ exports.fontWeightProperty = new properties_1.InheritedCssProperty({
         }
     }
 });
-exports.fontWeightProperty.register(style_1.Style);
+exports.fontWeightProperty.register(properties_1.Style);
 var fontProperty = new properties_1.ShorthandProperty({
     name: "font", cssName: "font",
     getter: function () {
@@ -885,7 +949,7 @@ var fontProperty = new properties_1.ShorthandProperty({
         }
     }
 });
-fontProperty.register(style_1.Style);
+fontProperty.register(properties_1.Style);
 var Visibility;
 (function (Visibility) {
     Visibility.VISIBLE = "visible";
@@ -900,5 +964,5 @@ exports.visibilityProperty = new properties_1.CssProperty({
         target.view.isCollapsed = (newValue === Visibility.COLLAPSE);
     }
 });
-exports.visibilityProperty.register(style_1.Style);
+exports.visibilityProperty.register(properties_1.Style);
 //# sourceMappingURL=style-properties.js.map

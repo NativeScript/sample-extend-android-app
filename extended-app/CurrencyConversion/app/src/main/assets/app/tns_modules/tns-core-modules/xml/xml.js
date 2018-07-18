@@ -3,13 +3,13 @@ var easysax = require("../js-libs/easysax");
 var ParserEventType = (function () {
     function ParserEventType() {
     }
+    ParserEventType.StartElement = "StartElement";
+    ParserEventType.EndElement = "EndElement";
+    ParserEventType.Text = "Text";
+    ParserEventType.CDATA = "CDATA";
+    ParserEventType.Comment = "Comment";
     return ParserEventType;
 }());
-ParserEventType.StartElement = "StartElement";
-ParserEventType.EndElement = "EndElement";
-ParserEventType.Text = "Text";
-ParserEventType.CDATA = "CDATA";
-ParserEventType.Comment = "Comment";
 exports.ParserEventType = ParserEventType;
 var ParserEvent = (function () {
     function ParserEvent(eventType, position, prefix, namespace, elementName, attributes, data) {
@@ -121,7 +121,7 @@ var XmlParser = (function () {
         this._processNamespaces = processNamespaces;
         this._parser = new easysax.EasySAXParser();
         var that = this;
-        this._parser.on('startNode', function (elem, attr, uq, tagend, str, pos) {
+        this._parser.on("startNode", function (elem, attr, uq, tagend, str, pos) {
             var attributes = attr();
             if (attributes === true) {
                 attributes = undefined;
@@ -147,11 +147,11 @@ var XmlParser = (function () {
             }
             onEvent(new ParserEvent(ParserEventType.StartElement, pos(), prefix, namespace, name, attributes, undefined));
         });
-        this._parser.on('textNode', function (text, uq, pos) {
+        this._parser.on("textNode", function (text, uq, pos) {
             var data = uq(XmlParser._dereferenceEntities(text));
             onEvent(new ParserEvent(ParserEventType.Text, pos(), undefined, undefined, undefined, undefined, data));
         });
-        this._parser.on('endNode', function (elem, uq, tagstart, str, pos) {
+        this._parser.on("endNode", function (elem, uq, tagstart, str, pos) {
             var prefix = undefined;
             var namespace = undefined;
             var name = elem;
@@ -166,14 +166,14 @@ var XmlParser = (function () {
                 that._namespaceStack.pop();
             }
         });
-        this._parser.on('cdata', function (data, res, pos) {
+        this._parser.on("cdata", function (data, res, pos) {
             onEvent(new ParserEvent(ParserEventType.CDATA, pos(), undefined, undefined, undefined, undefined, data));
         });
-        this._parser.on('comment', function (text, uq, pos) {
+        this._parser.on("comment", function (text, uq, pos) {
             onEvent(new ParserEvent(ParserEventType.Comment, pos(), undefined, undefined, undefined, undefined, text));
         });
         if (onError) {
-            this._parser.on('error', function (msg, pos) {
+            this._parser.on("error", function (msg, pos) {
                 onError(new Error(msg), pos());
             });
         }
@@ -244,7 +244,7 @@ var XmlParser = (function () {
     };
     XmlParser._dereferenceEntities = function (s) {
         s = String(s);
-        if (s.length > 3 && s.indexOf('&') !== -1) {
+        if (s.length > 3 && s.indexOf("&") !== -1) {
             s = s.replace(_entitySearchRegEx, _HandleAmpEntities);
         }
         return s;

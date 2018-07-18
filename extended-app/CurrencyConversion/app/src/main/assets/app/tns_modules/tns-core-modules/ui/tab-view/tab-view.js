@@ -7,116 +7,177 @@ var tab_view_common_1 = require("./tab-view-common");
 var text_base_1 = require("../text-base");
 var image_source_1 = require("../../image-source");
 var utils_1 = require("../../utils/utils");
+var frame_1 = require("../frame");
 __export(require("./tab-view-common"));
-var VIEWS_STATES = "_viewStates";
 var ACCENT_COLOR = "colorAccent";
 var PRIMARY_COLOR = "colorPrimary";
 var DEFAULT_ELEVATION = 4;
+var TABID = "_tabId";
+var INDEX = "_index";
 var PagerAdapter;
-var PageChangedListener;
+function makeFragmentName(viewId, id) {
+    return "android:viewpager:" + viewId + ":" + id;
+}
+function getTabById(id) {
+    var ref = exports.tabs.find(function (ref) {
+        var tab = ref.get();
+        return tab && tab._domId === id;
+    });
+    return ref && ref.get();
+}
 function initializeNativeClasses() {
     if (PagerAdapter) {
         return;
     }
-    var PagerAdapterImpl = (function (_super) {
-        __extends(PagerAdapterImpl, _super);
-        function PagerAdapterImpl(owner, items) {
+    var TabFragmentImplementation = (function (_super) {
+        __extends(TabFragmentImplementation, _super);
+        function TabFragmentImplementation() {
+            var _this = _super.call(this) || this;
+            return global.__native(_this);
+        }
+        TabFragmentImplementation.newInstance = function (tabId, index) {
+            var args = new android.os.Bundle();
+            args.putInt(TABID, tabId);
+            args.putInt(INDEX, index);
+            var fragment = new TabFragmentImplementation();
+            fragment.setArguments(args);
+            return fragment;
+        };
+        TabFragmentImplementation.prototype.onCreate = function (savedInstanceState) {
+            _super.prototype.onCreate.call(this, savedInstanceState);
+            var args = this.getArguments();
+            this.tab = getTabById(args.getInt(TABID));
+            this.index = args.getInt(INDEX);
+            if (!this.tab) {
+                throw new Error("Cannot find TabView");
+            }
+        };
+        TabFragmentImplementation.prototype.onCreateView = function (inflater, container, savedInstanceState) {
+            var tabItem = this.tab.items[this.index];
+            return tabItem.view.nativeViewProtected;
+        };
+        TabFragmentImplementation.prototype.onDestroyView = function () {
+            _super.prototype.onDestroyView.call(this);
+        };
+        return TabFragmentImplementation;
+    }(android.app.Fragment));
+    var POSITION_UNCHANGED = -1;
+    var POSITION_NONE = -2;
+    var FragmentPagerAdapter = (function (_super) {
+        __extends(FragmentPagerAdapter, _super);
+        function FragmentPagerAdapter(owner) {
             var _this = _super.call(this) || this;
             _this.owner = owner;
-            _this.items = items;
             return global.__native(_this);
         }
-        PagerAdapterImpl.prototype.getCount = function () {
-            return this.items ? this.items.length : 0;
+        FragmentPagerAdapter.prototype.getCount = function () {
+            var items = this.items;
+            return items ? items.length : 0;
         };
-        PagerAdapterImpl.prototype.getPageTitle = function (index) {
-            if (index < 0 || index >= this.items.length) {
+        FragmentPagerAdapter.prototype.getPageTitle = function (index) {
+            var items = this.items;
+            if (index < 0 || index >= items.length) {
                 return "";
             }
-            return this.items[index].title;
+            return items[index].title;
         };
-        PagerAdapterImpl.prototype.instantiateItem = function (container, index) {
-            if (tab_view_common_1.traceEnabled()) {
-                tab_view_common_1.traceWrite("TabView.PagerAdapter.instantiateItem; container: " + container + "; index: " + index, tab_view_common_1.traceCategory);
+        FragmentPagerAdapter.prototype.startUpdate = function (container) {
+            if (container.getId() === android.view.View.NO_ID) {
+                throw new Error("ViewPager with adapter " + this + " requires a view containerId");
             }
-            var item = this.items[index];
-            if (this[VIEWS_STATES]) {
-                if (tab_view_common_1.traceEnabled()) {
-                    tab_view_common_1.traceWrite("TabView.PagerAdapter.instantiateItem; restoreHierarchyState: " + item.view, tab_view_common_1.traceCategory);
+        };
+        FragmentPagerAdapter.prototype.instantiateItem = function (container, position) {
+            var fragmentManager = this.owner._getFragmentManager();
+            if (!this.mCurTransaction) {
+                this.mCurTransaction = fragmentManager.beginTransaction();
+            }
+            var itemId = this.getItemId(position);
+            var name = makeFragmentName(container.getId(), itemId);
+            var fragment = fragmentManager.findFragmentByTag(name);
+            if (fragment != null) {
+                this.mCurTransaction.attach(fragment);
+            }
+            else {
+                fragment = TabFragmentImplementation.newInstance(this.owner._domId, position);
+                this.mCurTransaction.add(container.getId(), fragment, name);
+            }
+            if (fragment !== this.mCurrentPrimaryItem) {
+                fragment.setMenuVisibility(false);
+                fragment.setUserVisibleHint(false);
+            }
+            var tabItems = this.owner.items;
+            var tabItem = tabItems ? tabItems[position] : null;
+            if (tabItem) {
+                tabItem.canBeLoaded = true;
+            }
+            return fragment;
+        };
+        FragmentPagerAdapter.prototype.getItemPosition = function (object) {
+            return this.items ? POSITION_UNCHANGED : POSITION_NONE;
+        };
+        FragmentPagerAdapter.prototype.destroyItem = function (container, position, object) {
+            if (!this.mCurTransaction) {
+                var fragmentManager = this.owner._getFragmentManager();
+                this.mCurTransaction = fragmentManager.beginTransaction();
+            }
+            var fragment = object;
+            this.mCurTransaction.detach(fragment);
+            if (this.mCurrentPrimaryItem === fragment) {
+                this.mCurrentPrimaryItem = null;
+            }
+            var tabItems = this.owner.items;
+            var tabItem = tabItems ? tabItems[position] : null;
+            if (tabItem) {
+                tabItem.canBeLoaded = false;
+            }
+        };
+        FragmentPagerAdapter.prototype.setPrimaryItem = function (container, position, object) {
+            var fragment = object;
+            if (fragment !== this.mCurrentPrimaryItem) {
+                if (this.mCurrentPrimaryItem != null) {
+                    this.mCurrentPrimaryItem.setMenuVisibility(false);
+                    this.mCurrentPrimaryItem.setUserVisibleHint(false);
                 }
-                item.view.nativeView.restoreHierarchyState(this[VIEWS_STATES]);
-            }
-            if (item.view.nativeView) {
-                container.addView(item.view.nativeView);
-            }
-            return item.view.nativeView;
-        };
-        PagerAdapterImpl.prototype.destroyItem = function (container, index, _object) {
-            if (tab_view_common_1.traceEnabled()) {
-                tab_view_common_1.traceWrite("TabView.PagerAdapter.destroyItem; container: " + container + "; index: " + index + "; _object: " + _object, tab_view_common_1.traceCategory);
-            }
-            var item = this.items[index];
-            var nativeView = item.view.nativeView;
-            if (!nativeView || !_object) {
-                return;
-            }
-            if (nativeView.toString() !== _object.toString()) {
-                throw new Error("Expected " + nativeView.toString() + " to equal " + _object.toString());
-            }
-            container.removeView(nativeView);
-        };
-        PagerAdapterImpl.prototype.isViewFromObject = function (view, _object) {
-            return view === _object;
-        };
-        PagerAdapterImpl.prototype.saveState = function () {
-            if (tab_view_common_1.traceEnabled()) {
-                tab_view_common_1.traceWrite("TabView.PagerAdapter.saveState", tab_view_common_1.traceCategory);
-            }
-            var owner = this.owner;
-            if (owner._childrenCount === 0) {
-                return null;
-            }
-            if (!this[VIEWS_STATES]) {
-                this[VIEWS_STATES] = new android.util.SparseArray();
-            }
-            var viewStates = this[VIEWS_STATES];
-            var childCallback = function (view) {
-                var nativeView = view.nativeView;
-                if (nativeView && nativeView.isSaveFromParentEnabled && nativeView.isSaveFromParentEnabled()) {
-                    nativeView.saveHierarchyState(viewStates);
+                if (fragment != null) {
+                    fragment.setMenuVisibility(true);
+                    fragment.setUserVisibleHint(true);
                 }
-                return true;
-            };
-            owner.eachChildView(childCallback);
-            var bundle = new android.os.Bundle();
-            bundle.putSparseParcelableArray(VIEWS_STATES, viewStates);
-            return bundle;
-        };
-        PagerAdapterImpl.prototype.restoreState = function (state, loader) {
-            if (tab_view_common_1.traceEnabled()) {
-                tab_view_common_1.traceWrite("TabView.PagerAdapter.restoreState", tab_view_common_1.traceCategory);
+                this.mCurrentPrimaryItem = fragment;
+                this.owner.selectedIndex = position;
+                var tab = this.owner;
+                var tabItems = tab.items;
+                var newTabItem = tabItems ? tabItems[position] : null;
+                if (newTabItem) {
+                    tab._loadUnloadTabItems(tab.selectedIndex);
+                }
             }
-            var bundle = state;
-            bundle.setClassLoader(loader);
-            this[VIEWS_STATES] = bundle.getSparseParcelableArray(VIEWS_STATES);
         };
-        return PagerAdapterImpl;
+        FragmentPagerAdapter.prototype.finishUpdate = function (container) {
+            if (this.mCurTransaction != null) {
+                if (android.os.Build.VERSION.SDK_INT >= 24) {
+                    this.mCurTransaction.commitNowAllowingStateLoss();
+                }
+                else {
+                    this.mCurTransaction.commitAllowingStateLoss();
+                    this.owner._getFragmentManager().executePendingTransactions();
+                }
+                this.mCurTransaction = null;
+            }
+        };
+        FragmentPagerAdapter.prototype.isViewFromObject = function (view, object) {
+            return object.getView() === view;
+        };
+        FragmentPagerAdapter.prototype.saveState = function () {
+            return null;
+        };
+        FragmentPagerAdapter.prototype.restoreState = function (state, loader) {
+        };
+        FragmentPagerAdapter.prototype.getItemId = function (position) {
+            return position;
+        };
+        return FragmentPagerAdapter;
     }(android.support.v4.view.PagerAdapter));
-    ;
-    var PageChangedListenerImpl = (function (_super) {
-        __extends(PageChangedListenerImpl, _super);
-        function PageChangedListenerImpl(owner) {
-            var _this = _super.call(this) || this;
-            _this._owner = owner;
-            return global.__native(_this);
-        }
-        PageChangedListenerImpl.prototype.onPageSelected = function (position) {
-            this._owner.selectedIndex = position;
-        };
-        return PageChangedListenerImpl;
-    }(android.support.v4.view.ViewPager.SimpleOnPageChangeListener));
-    PagerAdapter = PagerAdapterImpl;
-    PageChangedListener = PageChangedListenerImpl;
+    PagerAdapter = FragmentPagerAdapter;
 }
 function createTabItemSpec(item) {
     var result = new org.nativescript.widgets.TabItemSpec();
@@ -137,7 +198,7 @@ function createTabItemSpec(item) {
 var defaultAccentColor = undefined;
 function getDefaultAccentColor(context) {
     if (defaultAccentColor === undefined) {
-        defaultAccentColor = utils_1.ad.resources.getPalleteColor(ACCENT_COLOR, context) || 0xFF33B5E5;
+        defaultAccentColor = utils_1.ad.resources.getPaletteColor(ACCENT_COLOR, context) || 0xFF33B5E5;
     }
     return defaultAccentColor;
 }
@@ -148,54 +209,56 @@ var TabViewItem = (function (_super) {
     }
     TabViewItem.prototype.initNativeView = function () {
         _super.prototype.initNativeView.call(this);
-        if (this.nativeView) {
-            this._defaultTransformationMethod = this.nativeView.getTransformationMethod();
+        if (this.nativeViewProtected) {
+            this._defaultTransformationMethod = this.nativeViewProtected.getTransformationMethod();
         }
+    };
+    TabViewItem.prototype.onLoaded = function () {
+        _super.prototype.onLoaded.call(this);
     };
     TabViewItem.prototype.resetNativeView = function () {
         _super.prototype.resetNativeView.call(this);
-        if (this.nativeView) {
-            this.nativeView.setTransformationMethod(this._defaultTransformationMethod);
+        if (this.nativeViewProtected) {
+            this.nativeViewProtected.setTransformationMethod(this._defaultTransformationMethod);
         }
+    };
+    TabViewItem.prototype.disposeNativeView = function () {
+        _super.prototype.disposeNativeView.call(this);
+        this.canBeLoaded = false;
     };
     TabViewItem.prototype.createNativeView = function () {
-        return this.nativeView;
-    };
-    TabViewItem.prototype.setNativeView = function (textView) {
-        this.nativeView = textView;
-        if (textView) {
-            tab_view_common_1.initNativeView(this);
-        }
+        return this.nativeViewProtected;
     };
     TabViewItem.prototype._update = function () {
-        var tv = this.nativeView;
-        if (tv) {
-            var tabLayout = tv.getParent();
-            tabLayout.updateItemAt(this.index, this.tabItemSpec);
+        var tv = this.nativeViewProtected;
+        var tabView = this.parent;
+        if (tv && tabView) {
+            this.tabItemSpec = createTabItemSpec(this);
+            tabView.updateAndroidItemAt(this.index, this.tabItemSpec);
         }
     };
     TabViewItem.prototype[tab_view_common_1.fontSizeProperty.getDefault] = function () {
-        return { nativeSize: this.nativeView.getTextSize() };
+        return { nativeSize: this.nativeViewProtected.getTextSize() };
     };
     TabViewItem.prototype[tab_view_common_1.fontSizeProperty.setNative] = function (value) {
         if (typeof value === "number") {
-            this.nativeView.setTextSize(value);
+            this.nativeViewProtected.setTextSize(value);
         }
         else {
-            this.nativeView.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, value.nativeSize);
+            this.nativeViewProtected.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, value.nativeSize);
         }
     };
     TabViewItem.prototype[tab_view_common_1.fontInternalProperty.getDefault] = function () {
-        return this.nativeView.getTypeface();
+        return this.nativeViewProtected.getTypeface();
     };
     TabViewItem.prototype[tab_view_common_1.fontInternalProperty.setNative] = function (value) {
-        this.nativeView.setTypeface(value instanceof font_1.Font ? value.getAndroidTypeface() : value);
+        this.nativeViewProtected.setTypeface(value instanceof font_1.Font ? value.getAndroidTypeface() : value);
     };
     TabViewItem.prototype[text_base_1.textTransformProperty.getDefault] = function () {
         return "default";
     };
     TabViewItem.prototype[text_base_1.textTransformProperty.setNative] = function (value) {
-        var tv = this.nativeView;
+        var tv = this.nativeViewProtected;
         if (value === "default") {
             tv.setTransformationMethod(this._defaultTransformationMethod);
             tv.setText(this.title);
@@ -217,11 +280,20 @@ function setElevation(grid, tabLayout) {
         compat.setElevation(tabLayout, val);
     }
 }
+exports.tabs = new Array();
+function iterateIndexRange(index, eps, lastIndex, callback) {
+    var rangeStart = Math.max(0, index - eps);
+    var rangeEnd = Math.min(index + eps, lastIndex);
+    for (var i = rangeStart; i <= rangeEnd; i++) {
+        callback(i);
+    }
+}
 var TabView = (function (_super) {
     __extends(TabView, _super);
     function TabView() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
+        var _this = _super.call(this) || this;
         _this._androidViewId = -1;
+        exports.tabs.push(new WeakRef(_this));
         return _this;
     }
     TabView.prototype.onItemsChanged = function (oldItems, newItems) {
@@ -241,32 +313,38 @@ var TabView = (function (_super) {
         }
         var context = this._context;
         var nativeView = new org.nativescript.widgets.GridLayout(context);
-        nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.auto));
-        nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.star));
+        var viewPager = new org.nativescript.widgets.TabViewPager(context);
         var tabLayout = new org.nativescript.widgets.TabLayout(context);
+        var lp = new org.nativescript.widgets.CommonLayoutParams();
+        var primaryColor = utils_1.ad.resources.getPaletteColor(PRIMARY_COLOR, context);
+        var accentColor = getDefaultAccentColor(context);
+        lp.row = 1;
+        if (this.androidTabsPosition === "top") {
+            nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.auto));
+            nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.star));
+            viewPager.setLayoutParams(lp);
+        }
+        else {
+            nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.star));
+            nativeView.addRow(new org.nativescript.widgets.ItemSpec(1, org.nativescript.widgets.GridUnitType.auto));
+            tabLayout.setLayoutParams(lp);
+            viewPager.setSwipePageEnabled(false);
+            accentColor = 0x00FFFFFF;
+        }
+        nativeView.addView(viewPager);
+        nativeView.viewPager = viewPager;
+        var adapter = new PagerAdapter(this);
+        viewPager.setAdapter(adapter);
+        viewPager.adapter = adapter;
         nativeView.addView(tabLayout);
         nativeView.tabLayout = tabLayout;
         setElevation(nativeView, tabLayout);
-        var accentColor = getDefaultAccentColor(context);
         if (accentColor) {
             tabLayout.setSelectedIndicatorColors([accentColor]);
         }
-        var primaryColor = utils_1.ad.resources.getPalleteColor(PRIMARY_COLOR, context);
         if (primaryColor) {
             tabLayout.setBackgroundColor(primaryColor);
         }
-        var viewPager = new android.support.v4.view.ViewPager(context);
-        var lp = new org.nativescript.widgets.CommonLayoutParams();
-        lp.row = 1;
-        viewPager.setLayoutParams(lp);
-        nativeView.addView(viewPager);
-        nativeView.viewPager = viewPager;
-        var listener = new PageChangedListener(this);
-        viewPager.addOnPageChangeListener(listener);
-        viewPager.listener = listener;
-        var adapter = new PagerAdapter(this, null);
-        viewPager.setAdapter(adapter);
-        viewPager.adapter = adapter;
         return nativeView;
     };
     TabView.prototype.initNativeView = function () {
@@ -274,54 +352,126 @@ var TabView = (function (_super) {
         if (this._androidViewId < 0) {
             this._androidViewId = android.view.View.generateViewId();
         }
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         this._tabLayout = nativeView.tabLayout;
         var viewPager = nativeView.viewPager;
         viewPager.setId(this._androidViewId);
         this._viewPager = viewPager;
-        viewPager.listener.owner = this;
         this._pagerAdapter = viewPager.adapter;
         this._pagerAdapter.owner = this;
     };
+    TabView.prototype._loadUnloadTabItems = function (newIndex) {
+        var _this = this;
+        var items = this.items;
+        var lastIndex = this.items.length - 1;
+        var offsideItems = this.androidTabsPosition === "top" ? this.androidOffscreenTabLimit : 0;
+        var toUnload = [];
+        var toLoad = [];
+        iterateIndexRange(newIndex, offsideItems, lastIndex, function (i) { return toLoad.push(i); });
+        items.forEach(function (item, i) {
+            var indexOfI = toLoad.indexOf(i);
+            if (indexOfI < 0) {
+                toUnload.push(i);
+            }
+        });
+        toUnload.forEach(function (index) {
+            var item = items[index];
+            if (items[index]) {
+                item.unloadView(item.view);
+            }
+        });
+        var newItem = items[newIndex];
+        var selectedView = newItem && newItem.view;
+        if (selectedView instanceof frame_1.Frame) {
+            selectedView._pushInFrameStack();
+        }
+        toLoad.forEach(function (index) {
+            var item = items[index];
+            if (_this.isLoaded && items[index]) {
+                item.loadView(item.view);
+            }
+        });
+    };
+    TabView.prototype.onLoaded = function () {
+        _super.prototype.onLoaded.call(this);
+        this.setAdapterItems(this.items);
+    };
+    TabView.prototype.onUnloaded = function () {
+        _super.prototype.onUnloaded.call(this);
+        this.setAdapterItems(null);
+    };
     TabView.prototype.disposeNativeView = function () {
-        this._pagerAdapter.notifyDataSetChanged();
+        this._tabLayout.setItems(null, null);
         this._pagerAdapter.owner = null;
         this._pagerAdapter = null;
         this._tabLayout = null;
-        this._viewPager.listener.owner = null;
         this._viewPager = null;
         _super.prototype.disposeNativeView.call(this);
     };
-    TabView.prototype.setAdapterItems = function (items) {
-        this._pagerAdapter.items = items;
-        var length = items ? items.length : 0;
-        if (length === 0) {
-            this._tabLayout.setItems(null, null);
-            return;
+    TabView.prototype.onBackPressed = function () {
+        var currentView = this._selectedView;
+        if (currentView) {
+            return currentView.onBackPressed();
         }
-        var tabItems = new Array();
-        items.forEach(function (item, i, arr) {
-            var tabItemSpec = createTabItemSpec(item);
-            item.index = i;
-            item.tabItemSpec = tabItemSpec;
-            tabItems.push(tabItemSpec);
+        return false;
+    };
+    TabView.prototype.shouldUpdateAdapter = function (items) {
+        if (!this._pagerAdapter) {
+            return false;
+        }
+        var currentPagerAdapterItems = this._pagerAdapter.items;
+        if (!items && !currentPagerAdapterItems) {
+            return false;
+        }
+        if (!items || !currentPagerAdapterItems) {
+            return true;
+        }
+        if (items.length !== currentPagerAdapterItems.length) {
+            return true;
+        }
+        var matchingItems = currentPagerAdapterItems.filter(function (currentItem) {
+            return !!items.filter(function (item) {
+                return item._domId === currentItem._domId;
+            })[0];
         });
-        var tabLayout = this._tabLayout;
-        tabLayout.setItems(tabItems, this._viewPager);
-        items.forEach(function (item, i, arr) {
-            var tv = tabLayout.getTextViewForItemAt(i);
-            item.setNativeView(tv);
-        });
-        this._pagerAdapter.notifyDataSetChanged();
+        if (matchingItems.length !== items.length) {
+            return true;
+        }
+        return false;
+    };
+    TabView.prototype.setAdapterItems = function (items) {
+        if (this.shouldUpdateAdapter(items)) {
+            this._pagerAdapter.items = items;
+            var length_1 = items ? items.length : 0;
+            if (length_1 === 0) {
+                this._tabLayout.setItems(null, null);
+                this._pagerAdapter.notifyDataSetChanged();
+                return;
+            }
+            var tabItems_1 = new Array();
+            items.forEach(function (item, i, arr) {
+                var tabItemSpec = createTabItemSpec(item);
+                item.index = i;
+                item.tabItemSpec = tabItemSpec;
+                tabItems_1.push(tabItemSpec);
+            });
+            var tabLayout_1 = this._tabLayout;
+            tabLayout_1.setItems(tabItems_1, this._viewPager);
+            items.forEach(function (item, i, arr) {
+                var tv = tabLayout_1.getTextViewForItemAt(i);
+                item.setNativeView(tv);
+            });
+            this._pagerAdapter.notifyDataSetChanged();
+        }
+    };
+    TabView.prototype.updateAndroidItemAt = function (index, spec) {
+        this._tabLayout.updateItemAt(index, spec);
     };
     TabView.prototype[tab_view_common_1.androidOffscreenTabLimitProperty.getDefault] = function () {
         return this._viewPager.getOffscreenPageLimit();
     };
     TabView.prototype[tab_view_common_1.androidOffscreenTabLimitProperty.setNative] = function (value) {
         this._viewPager.setOffscreenPageLimit(value);
-    };
-    TabView.prototype[tab_view_common_1.selectedIndexProperty.getDefault] = function () {
-        return -1;
     };
     TabView.prototype[tab_view_common_1.selectedIndexProperty.setNative] = function (value) {
         if (tab_view_common_1.traceEnabled()) {
@@ -337,14 +487,25 @@ var TabView = (function (_super) {
         tab_view_common_1.selectedIndexProperty.coerce(this);
     };
     TabView.prototype[tab_view_common_1.tabBackgroundColorProperty.getDefault] = function () {
-        return this._tabLayout.getBackground().getConstantState();
+        return this._tabLayout.getBackground();
     };
     TabView.prototype[tab_view_common_1.tabBackgroundColorProperty.setNative] = function (value) {
         if (value instanceof tab_view_common_1.Color) {
             this._tabLayout.setBackgroundColor(value.android);
         }
         else {
-            this._tabLayout.setBackground(value ? value.newDrawable() : null);
+            this._tabLayout.setBackground(tryCloneDrawable(value, this.nativeViewProtected.getResources));
+        }
+    };
+    TabView.prototype[tab_view_common_1.tabTextFontSizeProperty.getDefault] = function () {
+        return this._tabLayout.getTabTextFontSize();
+    };
+    TabView.prototype[tab_view_common_1.tabTextFontSizeProperty.setNative] = function (value) {
+        if (typeof value === "number") {
+            this._tabLayout.setTabTextFontSize(value);
+        }
+        else {
+            this._tabLayout.setTabTextFontSize(value.nativeSize);
         }
     };
     TabView.prototype[tab_view_common_1.tabTextColorProperty.getDefault] = function () {
@@ -372,4 +533,13 @@ var TabView = (function (_super) {
     return TabView;
 }(tab_view_common_1.TabViewBase));
 exports.TabView = TabView;
+function tryCloneDrawable(value, resources) {
+    if (value) {
+        var constantState = value.getConstantState();
+        if (constantState) {
+            return constantState.newDrawable(resources);
+        }
+    }
+    return value;
+}
 //# sourceMappingURL=tab-view.js.map

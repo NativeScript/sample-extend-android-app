@@ -9,7 +9,7 @@ var SecurityContext;
     SecurityContext[SecurityContext["URL"] = 4] = "URL";
     SecurityContext[SecurityContext["RESOURCE_URL"] = 5] = "RESOURCE_URL";
 })(SecurityContext = exports.SecurityContext || (exports.SecurityContext = {}));
-var NativeScriptElementSchemaRegistry = (function (_super) {
+var NativeScriptElementSchemaRegistry = /** @class */ (function (_super) {
     __extends(NativeScriptElementSchemaRegistry, _super);
     function NativeScriptElementSchemaRegistry() {
         return _super !== null && _super.apply(this, arguments) || this;

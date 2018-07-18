@@ -117,7 +117,7 @@ var ad;
             var hashSet = new java.util.HashSet();
             if (str !== undefined) {
                 for (var element in str) {
-                    hashSet.add('' + str[element]);
+                    hashSet.add("" + str[element]);
                 }
             }
             return hashSet;
@@ -128,7 +128,7 @@ var ad;
             if (stringSet !== undefined) {
                 var it = stringSet.iterator();
                 while (it.hasNext()) {
-                    var element = '' + it.next();
+                    var element = "" + it.next();
                     arr.push(element);
                 }
             }
@@ -156,6 +156,10 @@ var ad;
         }
         resources_1.getId = getId;
         function getPalleteColor(name, context) {
+            return getPaletteColor(name, context);
+        }
+        resources_1.getPalleteColor = getPalleteColor;
+        function getPaletteColor(name, context) {
             if (attrCache.has(name)) {
                 return attrCache.get(name);
             }
@@ -181,7 +185,7 @@ var ad;
             attrCache.set(name, result);
             return result;
         }
-        resources_1.getPalleteColor = getPalleteColor;
+        resources_1.getPaletteColor = getPaletteColor;
     })(resources = ad.resources || (ad.resources = {}));
 })(ad = exports.ad || (exports.ad = {}));
 function GC() {

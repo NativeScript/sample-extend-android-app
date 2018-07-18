@@ -3,6 +3,7 @@ function __export(m) {
 }
 Object.defineProperty(exports, "__esModule", { value: true });
 var text_base_1 = require("../text-base");
+var profiling_1 = require("../../profiling");
 __export(require("../text-base"));
 var TextView;
 var Label = (function (_super) {
@@ -15,6 +16,9 @@ var Label = (function (_super) {
             return this.style.whiteSpace === "normal";
         },
         set: function (value) {
+            if (typeof value === "string") {
+                value = text_base_1.booleanConverter(value);
+            }
             this.style.whiteSpace = value ? "normal" : "nowrap";
         },
         enumerable: true,
@@ -28,7 +32,7 @@ var Label = (function (_super) {
     };
     Label.prototype.initNativeView = function () {
         _super.prototype.initNativeView.call(this);
-        var textView = this.nativeView;
+        var textView = this.nativeViewProtected;
         textView.setSingleLine(true);
         textView.setEllipsize(android.text.TextUtils.TruncateAt.END);
     };
@@ -36,7 +40,15 @@ var Label = (function (_super) {
         var newValue = value === "initial" ? "nowrap" : value;
         _super.prototype[text_base_1.whiteSpaceProperty.setNative].call(this, newValue);
     };
+    __decorate([
+        profiling_1.profile
+    ], Label.prototype, "createNativeView", null);
+    Label = __decorate([
+        text_base_1.CSSType("Label")
+    ], Label);
     return Label;
 }(text_base_1.TextBase));
 exports.Label = Label;
+Label.prototype._isSingleLine = true;
+Label.prototype.recycleNativeView = "auto";
 //# sourceMappingURL=label.js.map

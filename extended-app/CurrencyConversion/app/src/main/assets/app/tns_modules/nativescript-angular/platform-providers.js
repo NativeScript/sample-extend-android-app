@@ -1,18 +1,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
+var core_1 = require("@angular/core");
 var frame_1 = require("tns-core-modules/ui/frame");
 var page_1 = require("tns-core-modules/ui/page");
-var core_1 = require("@angular/core");
 var platform_1 = require("tns-core-modules/platform");
-var platform = require("tns-core-modules/platform");
-exports.APP_ROOT_VIEW = new core_1.OpaqueToken("App Root View");
-exports.DEVICE = new core_1.OpaqueToken("platfrom device");
-exports.PAGE_FACTORY = new core_1.OpaqueToken("page factory");
-// Work around a TS bug requiring an import of platform.Device without using it
-if (global.___TS_UNUSED) {
-    (function () {
-        return platform;
-    })();
-}
+exports.APP_ROOT_VIEW = new core_1.InjectionToken("App Root View");
+exports.DEVICE = new core_1.InjectionToken("platform device");
+exports.PAGE_FACTORY = new core_1.InjectionToken("page factory");
 var _rootPageRef;
 function setRootPage(page) {
     _rootPageRef = new WeakRef(page);
@@ -24,8 +17,15 @@ function getRootPage() {
 exports.getRootPage = getRootPage;
 // Use an exported function to make the AoT compiler happy.
 function getDefaultPage() {
+    var rootPage = getRootPage();
+    if (rootPage instanceof page_1.Page) {
+        return rootPage;
+    }
     var frame = frame_1.topmost();
-    return getRootPage() || (frame && frame.currentPage);
+    if (frame && frame.currentPage) {
+        return frame.currentPage;
+    }
+    return null;
 }
 exports.getDefaultPage = getDefaultPage;
 exports.defaultPageProvider = { provide: page_1.Page, useFactory: getDefaultPage };
@@ -45,4 +45,17 @@ exports.defaultPageFactory = function (_opts) {
     return new page_1.Page();
 };
 exports.defaultPageFactoryProvider = { provide: exports.PAGE_FACTORY, useValue: exports.defaultPageFactory };
+var FrameService = /** @class */ (function () {
+    function FrameService() {
+    }
+    // TODO: Add any methods that are needed to handle frame/page navigation
+    FrameService.prototype.getFrame = function () {
+        return frame_1.topmost();
+    };
+    FrameService.decorators = [
+        { type: core_1.Injectable },
+    ];
+    return FrameService;
+}());
+exports.FrameService = FrameService;
 //# sourceMappingURL=platform-providers.js.map

@@ -1,11 +1,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = require("@angular/core");
-var collection_facade_1 = require("../collection-facade");
-var observable_array_1 = require("tns-core-modules/data/observable-array");
 var layout_base_1 = require("tns-core-modules/ui/layouts/layout-base");
+var observable_array_1 = require("tns-core-modules/data/observable-array");
+var profiling_1 = require("tns-core-modules/profiling");
+var element_registry_1 = require("../element-registry");
 var trace_1 = require("../trace");
 var NG_VIEW = "_ngViewRef";
-var ListItemContext = (function () {
+var ListItemContext = /** @class */ (function () {
     function ListItemContext($implicit, item, index, even, odd) {
         this.$implicit = $implicit;
         this.item = item;
@@ -16,10 +17,9 @@ var ListItemContext = (function () {
     return ListItemContext;
 }());
 exports.ListItemContext = ListItemContext;
-var ListViewComponent = (function () {
-    function ListViewComponent(_elementRef, _iterableDiffers, _cdr) {
+var ListViewComponent = /** @class */ (function () {
+    function ListViewComponent(_elementRef, _iterableDiffers) {
         this._iterableDiffers = _iterableDiffers;
-        this._cdr = _cdr;
         this.setupItemView = new core_1.EventEmitter();
         this.listView = _elementRef.nativeElement;
         this.listView.on("itemLoading", this.onItemLoading, this);
@@ -41,9 +41,9 @@ var ListViewComponent = (function () {
             if (value instanceof observable_array_1.ObservableArray) {
                 needDiffer = false;
             }
-            if (needDiffer && !this._differ && collection_facade_1.isListLikeIterable(value)) {
+            if (needDiffer && !this._differ && core_1.ɵisListLikeIterable(value)) {
                 this._differ = this._iterableDiffers.find(this._items)
-                    .create(this._cdr, function (_index, item) { return item; });
+                    .create(function (_index, item) { return item; });
             }
             this.listView.items = this._items;
         },
@@ -141,64 +141,46 @@ var ListViewComponent = (function () {
             }
         }
     };
+    ListViewComponent.decorators = [
+        { type: core_1.Component, args: [{
+                    selector: "ListView",
+                    template: "\n        <DetachedContainer>\n            <Placeholder #loader></Placeholder>\n        </DetachedContainer>",
+                    changeDetection: core_1.ChangeDetectionStrategy.OnPush
+                },] },
+    ];
+    /** @nocollapse */
+    ListViewComponent.ctorParameters = function () { return [
+        { type: core_1.ElementRef },
+        { type: core_1.IterableDiffers }
+    ]; };
+    ListViewComponent.propDecorators = {
+        loader: [{ type: core_1.ViewChild, args: ["loader", { read: core_1.ViewContainerRef },] }],
+        setupItemView: [{ type: core_1.Output }],
+        itemTemplateQuery: [{ type: core_1.ContentChild, args: [core_1.TemplateRef,] }],
+        items: [{ type: core_1.Input }]
+    };
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object]),
+        __metadata("design:returntype", void 0)
+    ], ListViewComponent.prototype, "onItemLoading", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [core_1.EmbeddedViewRef, Number]),
+        __metadata("design:returntype", void 0)
+    ], ListViewComponent.prototype, "detectChangesOnChild", null);
     return ListViewComponent;
 }());
-__decorate([
-    core_1.ViewChild("loader", { read: core_1.ViewContainerRef }),
-    __metadata("design:type", core_1.ViewContainerRef)
-], ListViewComponent.prototype, "loader", void 0);
-__decorate([
-    core_1.Output(),
-    __metadata("design:type", Object)
-], ListViewComponent.prototype, "setupItemView", void 0);
-__decorate([
-    core_1.ContentChild(core_1.TemplateRef),
-    __metadata("design:type", core_1.TemplateRef)
-], ListViewComponent.prototype, "itemTemplateQuery", void 0);
-__decorate([
-    core_1.Input(),
-    __metadata("design:type", Object),
-    __metadata("design:paramtypes", [Object])
-], ListViewComponent.prototype, "items", null);
-ListViewComponent = __decorate([
-    core_1.Component({
-        selector: "ListView",
-        template: "\n        <DetachedContainer>\n            <Placeholder #loader></Placeholder>\n        </DetachedContainer>",
-        changeDetection: core_1.ChangeDetectionStrategy.OnPush
-    }),
-    __metadata("design:paramtypes", [core_1.ElementRef,
-        core_1.IterableDiffers,
-        core_1.ChangeDetectorRef])
-], ListViewComponent);
 exports.ListViewComponent = ListViewComponent;
-function getSingleViewRecursive(nodes, nestLevel) {
-    var actualNodes = nodes.filter(function (n) { return !!n && n.nodeName !== "#text"; });
-    if (actualNodes.length === 0) {
-        throw new Error("No suitable views found in list template! Nesting level: " + nestLevel);
-    }
-    else if (actualNodes.length > 1) {
-        throw new Error("More than one view found in list template! Nesting level: " + nestLevel);
-    }
-    else {
-        if (actualNodes[0]) {
-            var parentLayout = actualNodes[0].parent;
-            if (parentLayout instanceof layout_base_1.LayoutBase) {
-                parentLayout.removeChild(actualNodes[0]);
-            }
-            return actualNodes[0];
-        }
-        else {
-            return getSingleViewRecursive(actualNodes[0].children, nestLevel + 1);
-        }
-    }
-}
 function getItemViewRoot(viewRef, rootLocator) {
-    if (rootLocator === void 0) { rootLocator = getSingleViewRecursive; }
+    if (rootLocator === void 0) { rootLocator = element_registry_1.getSingleViewRecursive; }
     var rootView = rootLocator(viewRef.rootNodes, 0);
     return rootView;
 }
 exports.getItemViewRoot = getItemViewRoot;
-var TemplateKeyDirective = (function () {
+var TemplateKeyDirective = /** @class */ (function () {
     function TemplateKeyDirective(templateRef, list) {
         this.templateRef = templateRef;
         this.list = list;
@@ -212,18 +194,18 @@ var TemplateKeyDirective = (function () {
         enumerable: true,
         configurable: true
     });
+    TemplateKeyDirective.decorators = [
+        { type: core_1.Directive, args: [{ selector: "[nsTemplateKey]" },] },
+    ];
+    /** @nocollapse */
+    TemplateKeyDirective.ctorParameters = function () { return [
+        { type: core_1.TemplateRef },
+        { type: ListViewComponent, decorators: [{ type: core_1.Host }] }
+    ]; };
+    TemplateKeyDirective.propDecorators = {
+        nsTemplateKey: [{ type: core_1.Input }]
+    };
     return TemplateKeyDirective;
 }());
-__decorate([
-    core_1.Input(),
-    __metadata("design:type", Object),
-    __metadata("design:paramtypes", [Object])
-], TemplateKeyDirective.prototype, "nsTemplateKey", null);
-TemplateKeyDirective = __decorate([
-    core_1.Directive({ selector: "[nsTemplateKey]" }),
-    __param(1, core_1.Host()),
-    __metadata("design:paramtypes", [core_1.TemplateRef,
-        ListViewComponent])
-], TemplateKeyDirective);
 exports.TemplateKeyDirective = TemplateKeyDirective;
 //# sourceMappingURL=list-view-comp.js.map
