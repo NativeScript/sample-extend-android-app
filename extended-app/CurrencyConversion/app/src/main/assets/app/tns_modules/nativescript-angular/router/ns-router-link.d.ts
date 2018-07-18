@@ -1,8 +1,7 @@
-import { OnChanges } from "@angular/core";
 import { ActivatedRoute, Router, UrlTree } from "@angular/router";
-import { PageRoute } from "./page-router-outlet";
 import { RouterExtensions } from "./router-extensions";
 import { NavigationTransition } from "tns-core-modules/ui/frame";
+export declare type QueryParamsHandling = "merge" | "preserve" | "";
 /**
  * The nsRouterLink directive lets you link to specific parts of your app.
  *
@@ -27,27 +26,29 @@ import { NavigationTransition } from "tns-core-modules/ui/frame";
  * instead look in the current component"s children for the route.
  * And if the segment begins with `../`, the router will go up one level.
  */
-export declare class NSRouterLink implements OnChanges {
+export declare class NSRouterLink {
     private router;
     private navigator;
     private route;
-    private pageRoute;
-    private commands;
     target: string;
     queryParams: {
         [k: string]: any;
     };
     fragment: string;
+    queryParamsHandling: QueryParamsHandling;
+    preserveQueryParams: boolean;
+    preserveFragment: boolean;
+    skipLocationChange: boolean;
+    replaceUrl: boolean;
     clearHistory: boolean;
     pageTransition: boolean | string | NavigationTransition;
-    urlTree: UrlTree;
-    private usePageRoute;
-    private readonly currentRoute;
-    constructor(router: Router, navigator: RouterExtensions, route: ActivatedRoute, pageRoute: PageRoute);
+    pageTransitionDuration: any;
+    private commands;
+    constructor(router: Router, navigator: RouterExtensions, route: ActivatedRoute);
     params: any[] | string;
     onTap(): void;
     private getExtras();
+    readonly urlTree: UrlTree;
+    private convertClearHistory(value);
     private getTransition();
-    ngOnChanges(_: {}): any;
-    private updateUrlTree();
 }

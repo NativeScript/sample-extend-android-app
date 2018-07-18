@@ -45,7 +45,7 @@ function setBoolean(key, value) {
     common.ensureValidValue(value, "boolean");
     var editor = sharedPreferences.edit();
     editor.putBoolean(key, value);
-    editor.commit();
+    editor.apply();
 }
 exports.setBoolean = setBoolean;
 function setString(key, value) {
@@ -53,7 +53,7 @@ function setString(key, value) {
     common.ensureValidValue(value, "string");
     var editor = sharedPreferences.edit();
     editor.putString(key, value);
-    editor.commit();
+    editor.apply();
 }
 exports.setString = setString;
 function setNumber(key, value) {
@@ -61,19 +61,22 @@ function setNumber(key, value) {
     common.ensureValidValue(value, "number");
     var editor = sharedPreferences.edit();
     editor.putFloat(key, float(value));
-    editor.commit();
+    editor.apply();
 }
 exports.setNumber = setNumber;
 function remove(key) {
     verify(key);
     var editor = sharedPreferences.edit();
     editor.remove(key);
-    editor.commit();
+    editor.apply();
 }
 exports.remove = remove;
 function clear() {
     ensureSharedPreferences();
-    sharedPreferences.edit().clear().commit();
+    sharedPreferences.edit().clear().apply();
 }
 exports.clear = clear;
+exports.flush = function () {
+    return sharedPreferences.edit().commit();
+};
 //# sourceMappingURL=application-settings.js.map

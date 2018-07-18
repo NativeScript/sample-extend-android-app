@@ -56,8 +56,8 @@ export declare class _ParseAST {
     expectCharacter(code: number): void;
     optionalOperator(op: string): boolean;
     expectOperator(operator: string): void;
-    expectIdentifierOrKeyword(): string | null;
-    expectIdentifierOrKeywordOrString(): string | null;
+    expectIdentifierOrKeyword(): string;
+    expectIdentifierOrKeywordOrString(): string;
     parseChain(): AST;
     parsePipe(): AST;
     parseExpression(): AST;
@@ -76,7 +76,7 @@ export declare class _ParseAST {
     parseAccessMemberOrMethodCall(receiver: AST, isSafe?: boolean): AST;
     parseCallArguments(): BindingPipe[];
     /**
-     * An identifier, a keyword, a string with an optional `-` inbetween.
+     * An identifier, a keyword, a string with an optional `-` in between.
      */
     expectTemplateBindingKey(): string;
     parseTemplateBindings(): TemplateBindingParseResult;

@@ -3,7 +3,7 @@ var ns_location_strategy_1 = require("./ns-location-strategy");
 var common_1 = require("@angular/common");
 var core_1 = require("@angular/core");
 var trace_1 = require("../trace");
-var NativescriptPlatformLocation = (function (_super) {
+var NativescriptPlatformLocation = /** @class */ (function (_super) {
     __extends(NativescriptPlatformLocation, _super);
     function NativescriptPlatformLocation(locationStartegy) {
         var _this = _super.call(this) || this;
@@ -55,11 +55,14 @@ var NativescriptPlatformLocation = (function (_super) {
     NativescriptPlatformLocation.prototype.back = function () {
         this.locationStartegy.back();
     };
+    NativescriptPlatformLocation.decorators = [
+        { type: core_1.Injectable },
+    ];
+    /** @nocollapse */
+    NativescriptPlatformLocation.ctorParameters = function () { return [
+        { type: ns_location_strategy_1.NSLocationStrategy }
+    ]; };
     return NativescriptPlatformLocation;
 }(common_1.PlatformLocation));
-NativescriptPlatformLocation = __decorate([
-    core_1.Injectable(),
-    __metadata("design:paramtypes", [ns_location_strategy_1.NSLocationStrategy])
-], NativescriptPlatformLocation);
 exports.NativescriptPlatformLocation = NativescriptPlatformLocation;
 //# sourceMappingURL=ns-platform-location.js.map

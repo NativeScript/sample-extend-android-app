@@ -14,13 +14,20 @@ var ButtonBase = (function (_super) {
             return this.style.whiteSpace === "normal";
         },
         set: function (value) {
+            if (typeof value === "string") {
+                value = text_base_1.booleanConverter(value);
+            }
             this.style.whiteSpace = value ? "normal" : "nowrap";
         },
         enumerable: true,
         configurable: true
     });
+    ButtonBase.tapEvent = "tap";
+    ButtonBase = __decorate([
+        text_base_1.CSSType("Button")
+    ], ButtonBase);
     return ButtonBase;
 }(text_base_1.TextBase));
-ButtonBase.tapEvent = "tap";
 exports.ButtonBase = ButtonBase;
+ButtonBase.prototype.recycleNativeView = "auto";
 //# sourceMappingURL=button-common.js.map

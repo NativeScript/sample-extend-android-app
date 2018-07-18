@@ -1,5 +1,6 @@
 package org.nativescript.currencyconversion;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -22,17 +23,17 @@ import java.util.Iterator;
 public class MainActivity extends AppCompatActivity {
 
     public ArrayList<String> currencies = new ArrayList<String>();
+    private ArrayAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        final ListView listview = (ListView) findViewById(R.id.currencyList);
-        final ArrayAdapter adapter = new ArrayAdapter(this,
-                android.R.layout.simple_list_item_1, currencies);
+        final ListView listview = findViewById(R.id.currencyList);
+        adapter = new ArrayAdapter(this, android.R.layout.simple_list_item_1, currencies);
         listview.setAdapter(adapter);
     }
 
@@ -40,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         RequestQueue queue = Volley.newRequestQueue(this);
-        String url ="https://api.fixer.io/latest?base=usd";
+        String url ="http://data.fixer.io/api/latest?access_key=5f26927cd017e78e6f7ae10d41af0169";
         JsonObjectRequest stringRequest = new JsonObjectRequest(Request.Method.GET, url, null,
                 new Response.Listener<JSONObject>() {
                     @Override
@@ -51,9 +52,11 @@ public class MainActivity extends AppCompatActivity {
                                 String key = (String) keys.next();
                                 currencies.add(key + " -> " + response.getJSONObject("rates").getString(key));
                             }
+                            adapter.notifyDataSetChanged();
                         } catch (JSONException error) {
                             Log.d("NativeScript", error.getMessage());
                         }
+
                     }
                 }, new Response.ErrorListener() {
             @Override

@@ -2,10 +2,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = require("@angular/core");
 var view_1 = require("tns-core-modules/ui/core/view");
 var application_1 = require("tns-core-modules/application");
-var frame_1 = require("tns-core-modules/ui/frame");
+var profiling_1 = require("tns-core-modules/profiling");
 var platform_providers_1 = require("./platform-providers");
-var lang_facade_1 = require("./lang-facade");
 var view_util_1 = require("./view-util");
+var element_registry_1 = require("./element-registry");
 var trace_1 = require("./trace");
 // CONTENT_ATTR not exported from NativeScript_renderer - we need it for styles application.
 var COMPONENT_REGEX = /%COMP%/g;
@@ -13,7 +13,7 @@ exports.COMPONENT_VARIABLE = "%COMP%";
 exports.HOST_ATTR = "_nghost-" + exports.COMPONENT_VARIABLE;
 exports.CONTENT_ATTR = "_ngcontent-" + exports.COMPONENT_VARIABLE;
 var ATTR_SANITIZER = /-/g;
-var NativeScriptRendererFactory = (function () {
+var NativeScriptRendererFactory = /** @class */ (function () {
     function NativeScriptRendererFactory(rootView, device, zone) {
         this.zone = zone;
         this.componentRenderers = new Map();
@@ -23,7 +23,7 @@ var NativeScriptRendererFactory = (function () {
     }
     NativeScriptRendererFactory.prototype.setRootNgView = function (rootView) {
         if (!rootView) {
-            rootView = platform_providers_1.getRootPage() || frame_1.topmost().currentPage;
+            rootView = platform_providers_1.getRootPage();
         }
         rootView.nodeName = "NONE";
         this.rootNgView = rootView;
@@ -33,29 +33,33 @@ var NativeScriptRendererFactory = (function () {
             return this.defaultRenderer;
         }
         var renderer = this.componentRenderers.get(type.id);
-        if (!lang_facade_1.isBlank(renderer)) {
+        if (renderer) {
             return renderer;
         }
-        if (type.encapsulation === core_1.ViewEncapsulation.Emulated) {
-            renderer = new EmulatedRenderer(type, this.rootNgView, this.zone, this.viewUtil);
-            renderer.applyToHost(element);
+        if (type.encapsulation === core_1.ViewEncapsulation.None) {
+            type.styles.map(function (s) { return s.toString(); }).forEach(addStyleToCss);
+            renderer = this.defaultRenderer;
         }
         else {
-            renderer = this.defaultRenderer;
+            renderer = new EmulatedRenderer(type, this.rootNgView, this.zone, this.viewUtil);
+            renderer.applyToHost(element);
         }
         this.componentRenderers.set(type.id, renderer);
         return renderer;
     };
+    NativeScriptRendererFactory.decorators = [
+        { type: core_1.Injectable },
+    ];
+    /** @nocollapse */
+    NativeScriptRendererFactory.ctorParameters = function () { return [
+        { type: view_1.View, decorators: [{ type: core_1.Optional }, { type: core_1.Inject, args: [platform_providers_1.APP_ROOT_VIEW,] }] },
+        { type: undefined, decorators: [{ type: core_1.Inject, args: [platform_providers_1.DEVICE,] }] },
+        { type: core_1.NgZone }
+    ]; };
     return NativeScriptRendererFactory;
 }());
-NativeScriptRendererFactory = __decorate([
-    core_1.Injectable(),
-    __param(0, core_1.Optional()), __param(0, core_1.Inject(platform_providers_1.APP_ROOT_VIEW)),
-    __param(1, core_1.Inject(platform_providers_1.DEVICE)),
-    __metadata("design:paramtypes", [view_1.View, Object, core_1.NgZone])
-], NativeScriptRendererFactory);
 exports.NativeScriptRendererFactory = NativeScriptRendererFactory;
-var NativeScriptRenderer = (function (_super) {
+var NativeScriptRenderer = /** @class */ (function (_super) {
     __extends(NativeScriptRenderer, _super);
     function NativeScriptRenderer(rootView, zone, viewUtil) {
         var _this = _super.call(this) || this;
@@ -68,32 +72,36 @@ var NativeScriptRenderer = (function (_super) {
     }
     NativeScriptRenderer.prototype.appendChild = function (parent, newChild) {
         trace_1.rendererLog("NativeScriptRenderer.appendChild child: " + newChild + " parent: " + parent);
-        if (parent) {
-            this.viewUtil.insertChild(parent, newChild);
-        }
+        this.viewUtil.insertChild(parent, newChild);
     };
-    NativeScriptRenderer.prototype.insertBefore = function (parent, newChild, refChildIndex) {
-        trace_1.rendererLog("NativeScriptRenderer.insertBefore child: " + newChild + " parent: " + parent);
-        if (parent) {
-            this.viewUtil.insertChild(parent, newChild, refChildIndex);
-        }
+    NativeScriptRenderer.prototype.insertBefore = function (parent, newChild, _a) {
+        var previous = _a.previous, next = _a.next;
+        trace_1.rendererLog("NativeScriptRenderer.insertBefore child: " + newChild + " " +
+            ("parent: " + parent + " previous: " + previous + " next: " + next));
+        this.viewUtil.insertChild(parent, newChild, previous, next);
     };
     NativeScriptRenderer.prototype.removeChild = function (parent, oldChild) {
         trace_1.rendererLog("NativeScriptRenderer.removeChild child: " + oldChild + " parent: " + parent);
-        if (parent) {
-            this.viewUtil.removeChild(parent, oldChild);
-        }
+        this.viewUtil.removeChild(parent, oldChild);
     };
     NativeScriptRenderer.prototype.selectRootElement = function (selector) {
-        trace_1.rendererLog("selectRootElement: " + selector);
+        trace_1.rendererLog("NativeScriptRenderer.selectRootElement: " + selector);
+        if (selector && selector[0] === "#") {
+            var result = view_1.getViewById(this.rootView, selector.slice(1));
+            return (result || this.rootView);
+        }
         return this.rootView;
     };
     NativeScriptRenderer.prototype.parentNode = function (node) {
-        return node.parent;
+        trace_1.rendererLog("NativeScriptRenderer.parentNode for node: " + node);
+        return node.parentNode;
     };
     NativeScriptRenderer.prototype.nextSibling = function (node) {
-        trace_1.rendererLog("NativeScriptRenderer.nextSibling " + node);
-        return this.viewUtil.nextSiblingIndex(node);
+        trace_1.rendererLog("NativeScriptRenderer.nextSibling of " + node + " is " + node.nextSibling);
+        return {
+            previous: node,
+            next: node.nextSibling,
+        };
     };
     NativeScriptRenderer.prototype.createComment = function (_value) {
         trace_1.rendererLog("NativeScriptRenderer.createComment " + _value);
@@ -161,7 +169,8 @@ var NativeScriptRenderer = (function (_super) {
         trace_1.rendererLog("NativeScriptRenderer.invokeElementMethod " + methodName + " " + args);
     };
     NativeScriptRenderer.prototype.setValue = function (_renderNode, _value) {
-        trace_1.rendererLog("NativeScriptRenderer.setValue");
+        trace_1.rendererLog("NativeScriptRenderer.setValue " +
+            ("renderNode: " + _renderNode + ", value: " + _value));
     };
     NativeScriptRenderer.prototype.listen = function (renderElement, eventName, callback) {
         var _this = this;
@@ -183,10 +192,154 @@ var NativeScriptRenderer = (function (_super) {
         }
         return function () { return renderElement.off(eventName, zonedCallback); };
     };
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, Object]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "appendChild", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, Object, Object]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "insertBefore", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, Object]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "removeChild", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String]),
+        __metadata("design:returntype", Object)
+    ], NativeScriptRenderer.prototype, "selectRootElement", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object]),
+        __metadata("design:returntype", Object)
+    ], NativeScriptRenderer.prototype, "parentNode", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object]),
+        __metadata("design:returntype", Object)
+    ], NativeScriptRenderer.prototype, "nextSibling", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object]),
+        __metadata("design:returntype", element_registry_1.InvisibleNode)
+    ], NativeScriptRenderer.prototype, "createComment", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String]),
+        __metadata("design:returntype", Object)
+    ], NativeScriptRenderer.prototype, "createElement", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [String]),
+        __metadata("design:returntype", element_registry_1.InvisibleNode)
+    ], NativeScriptRenderer.prototype, "createText", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object]),
+        __metadata("design:returntype", Object)
+    ], NativeScriptRenderer.prototype, "createViewRoot", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, Array]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "projectNodes", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", []),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "destroy", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String, String, String]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "setAttribute", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "removeAttribute", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String, Object]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "setProperty", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "addClass", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "removeClass", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String, Object, Number]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "setStyle", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String, Number]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "removeStyle", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String, String]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "setBindingDebugInfo", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, Object]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "setElementDebugInfo", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String, Array]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "invokeElementMethod", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String]),
+        __metadata("design:returntype", void 0)
+    ], NativeScriptRenderer.prototype, "setValue", null);
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Object, String, Function]),
+        __metadata("design:returntype", Function)
+    ], NativeScriptRenderer.prototype, "listen", null);
     return NativeScriptRenderer;
 }(core_1.Renderer2));
 exports.NativeScriptRenderer = NativeScriptRenderer;
-var EmulatedRenderer = (function (_super) {
+var EmulatedRenderer = /** @class */ (function (_super) {
     __extends(EmulatedRenderer, _super);
     function EmulatedRenderer(component, rootView, zone, viewUtil) {
         var _this = _super.call(this, rootView, zone, viewUtil) || this;
@@ -212,10 +365,22 @@ var EmulatedRenderer = (function (_super) {
     EmulatedRenderer.prototype.addStyles = function (styles, componentId) {
         styles.map(function (s) { return s.toString(); })
             .map(function (s) { return replaceNgAttribute(s, componentId); })
-            .forEach(application_1.addCss);
+            .forEach(addStyleToCss);
     };
+    __decorate([
+        profiling_1.profile,
+        __metadata("design:type", Function),
+        __metadata("design:paramtypes", [Array, String]),
+        __metadata("design:returntype", void 0)
+    ], EmulatedRenderer.prototype, "addStyles", null);
     return EmulatedRenderer;
 }(NativeScriptRenderer));
+var ɵ0 = function addStyleToCss(style) {
+    application_1.addCss(style);
+};
+exports.ɵ0 = ɵ0;
+// tslint:disable-next-line
+var addStyleToCss = profiling_1.profile('"renderer".addStyleToCss', ɵ0);
 function replaceNgAttribute(input, componentId) {
     return input.replace(COMPONENT_REGEX, componentId);
 }

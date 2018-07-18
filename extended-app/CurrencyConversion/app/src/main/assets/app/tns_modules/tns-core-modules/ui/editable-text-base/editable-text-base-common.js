@@ -9,9 +9,10 @@ var EditableTextBase = (function (_super) {
     function EditableTextBase() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    EditableTextBase.blurEvent = "blur";
+    EditableTextBase.focusEvent = "focus";
     return EditableTextBase;
 }(text_base_1.TextBase));
-EditableTextBase.blurEvent = "blur";
 exports.EditableTextBase = EditableTextBase;
 exports.placeholderColorProperty = new text_base_1.CssProperty({ name: "placeholderColor", cssName: "placeholder-color", equalityComparer: text_base_1.Color.equals, valueConverter: function (v) { return new text_base_1.Color(v); } });
 exports.placeholderColorProperty.register(text_base_1.Style);
@@ -32,4 +33,6 @@ exports.autocorrectProperty = new text_base_1.Property({ name: "autocorrect", va
 exports.autocorrectProperty.register(EditableTextBase);
 exports.hintProperty = new text_base_1.Property({ name: "hint", defaultValue: "" });
 exports.hintProperty.register(EditableTextBase);
+exports.maxLengthProperty = new text_base_1.Property({ name: "maxLength", defaultValue: Number.POSITIVE_INFINITY, valueConverter: parseInt });
+exports.maxLengthProperty.register(EditableTextBase);
 //# sourceMappingURL=editable-text-base-common.js.map

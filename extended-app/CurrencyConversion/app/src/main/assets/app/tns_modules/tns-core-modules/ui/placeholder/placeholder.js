@@ -5,13 +5,18 @@ var Placeholder = (function (_super) {
     function Placeholder() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    Placeholder_1 = Placeholder;
     Placeholder.prototype.createNativeView = function () {
-        var args = { eventName: Placeholder.creatingViewEvent, object: this, view: undefined, context: this._context };
+        var args = { eventName: Placeholder_1.creatingViewEvent, object: this, view: undefined, context: this._context };
         this.notify(args);
         return args.view;
     };
+    Placeholder.creatingViewEvent = "creatingView";
+    Placeholder = Placeholder_1 = __decorate([
+        view_1.CSSType("Placeholder")
+    ], Placeholder);
     return Placeholder;
+    var Placeholder_1;
 }(view_1.View));
-Placeholder.creatingViewEvent = "creatingView";
 exports.Placeholder = Placeholder;
 //# sourceMappingURL=placeholder.js.map

@@ -29,23 +29,16 @@ var Font = (function (_super) {
     };
     Font.prototype.getAndroidTypeface = function () {
         if (!this._typeface) {
-            var fontStyle = 0;
-            if (this.isBold) {
-                fontStyle |= android.graphics.Typeface.BOLD;
-            }
-            if (this.isItalic) {
-                fontStyle |= android.graphics.Typeface.ITALIC;
-            }
-            this._typeface = createTypeface(this, fontStyle);
+            this._typeface = createTypeface(this);
         }
         return this._typeface;
     };
     Font.prototype.getUIFont = function (defaultFont) {
         return undefined;
     };
+    Font.default = new Font(undefined, undefined, "normal", "normal");
     return Font;
-}(font_common_1.FontBase));
-Font.default = new Font(undefined, undefined, "normal", "normal");
+}(font_common_1.Font));
 exports.Font = Font;
 function loadFontFromFile(fontFamily) {
     appAssets = appAssets || application.android.context.getAssets();
@@ -83,10 +76,17 @@ function loadFontFromFile(fontFamily) {
     }
     return result;
 }
-function createTypeface(font, fontStyle) {
+function createTypeface(font) {
+    var fontStyle = 0;
+    if (font.isBold) {
+        fontStyle |= android.graphics.Typeface.BOLD;
+    }
+    if (font.isItalic) {
+        fontStyle |= android.graphics.Typeface.ITALIC;
+    }
     var fonts = font_common_1.parseFontFamily(font.fontFamily);
     var result = null;
-    for (var i = 0; i < fonts.length && !result; i++) {
+    for (var i = 0; i < fonts.length; i++) {
         switch (fonts[i].toLowerCase()) {
             case font_common_1.genericFontFamilies.serif:
                 result = android.graphics.Typeface.create("serif" + getFontWeightSuffix(font.fontWeight), fontStyle);
@@ -100,14 +100,17 @@ function createTypeface(font, fontStyle) {
                 break;
             default:
                 result = loadFontFromFile(fonts[i]);
-                if (fontStyle) {
+                if (result && fontStyle) {
                     result = android.graphics.Typeface.create(result, fontStyle);
                 }
                 break;
         }
+        if (result) {
+            break;
+        }
     }
-    if (fontStyle && !result) {
-        result = android.graphics.Typeface.create(result, fontStyle);
+    if (!result) {
+        result = android.graphics.Typeface.create("sans-serif" + getFontWeightSuffix(font.fontWeight), fontStyle);
     }
     return result;
 }

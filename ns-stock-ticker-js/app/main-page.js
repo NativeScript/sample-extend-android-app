@@ -8,7 +8,7 @@ logic, and to set up your page’s data binding.
 NativeScript adheres to the CommonJS specification for dealing with
 JavaScript modules. The CommonJS require() function is how you import
 JavaScript modules defined in other files.
-*/
+*/ 
 var createViewModel = require("./main-view-model").createViewModel;
 
 function onNavigatingTo(args) {
@@ -29,10 +29,8 @@ function onNavigatingTo(args) {
     You can learn more about data binding in NativeScript at
     https://docs.nativescript.org/core-concepts/data-binding.
     */
-    let viewModel = createViewModel();
-    page.bindingContext = viewModel;
+    page.bindingContext = createViewModel();
 }
-
 
 /*
 Exporting a function in a NativeScript code-behind file makes it accessible

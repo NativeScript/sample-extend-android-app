@@ -9,11 +9,15 @@ var SearchBarBase = (function (_super) {
     function SearchBarBase() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    SearchBarBase.submitEvent = "submit";
+    SearchBarBase.clearEvent = "clear";
+    SearchBarBase = __decorate([
+        view_1.CSSType("SearchBar")
+    ], SearchBarBase);
     return SearchBarBase;
 }(view_1.View));
-SearchBarBase.submitEvent = "submit";
-SearchBarBase.clearEvent = "clear";
 exports.SearchBarBase = SearchBarBase;
+SearchBarBase.prototype.recycleNativeView = "auto";
 exports.textProperty = new view_1.Property({ name: "text", defaultValue: "", affectsLayout: view_1.isIOS });
 exports.textProperty.register(SearchBarBase);
 exports.hintProperty = new view_1.Property({ name: "hint", defaultValue: "" });

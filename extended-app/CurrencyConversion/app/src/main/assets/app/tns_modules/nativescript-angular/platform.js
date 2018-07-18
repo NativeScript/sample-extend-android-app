@@ -1,7 +1,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
-// Always import platform-common first - because polyfills
 var platform_common_1 = require("./platform-common");
+var ns_file_system_1 = require("./file-system/ns-file-system");
 var compiler_1 = require("@angular/compiler");
+var platform_browser_dynamic_1 = require("@angular/platform-browser-dynamic");
+var platform_browser_1 = require("@angular/platform-browser");
 var core_1 = require("@angular/core");
 // Work around a TS bug requiring an imports of
 // InjectionToken, ViewEncapsulation and MissingTranslationStrategy
@@ -11,25 +13,25 @@ if (global.___TS_UNUSED) {
     (function () { return core_1.ViewEncapsulation; })();
     (function () { return core_1.MissingTranslationStrategy; })();
 }
-// Register DOM adapter, if possible. Dynamic platform only!
 require("./dom-adapter");
 var schema_registry_1 = require("./schema-registry");
 var resource_loader_1 = require("./resource-loader");
 exports.NS_COMPILER_PROVIDERS = [
-    compiler_1.COMPILER_PROVIDERS,
+    platform_browser_1.ɵINTERNAL_BROWSER_PLATFORM_PROVIDERS,
     {
         provide: core_1.COMPILER_OPTIONS,
         useValue: {
             providers: [
-                { provide: compiler_1.ResourceLoader, useClass: resource_loader_1.FileSystemResourceLoader },
-                { provide: compiler_1.ElementSchemaRegistry, useClass: schema_registry_1.NativeScriptElementSchemaRegistry },
+                { provide: ns_file_system_1.NSFileSystem, deps: [] },
+                { provide: compiler_1.ResourceLoader, useClass: resource_loader_1.FileSystemResourceLoader, deps: [ns_file_system_1.NSFileSystem] },
+                { provide: compiler_1.ElementSchemaRegistry, useClass: schema_registry_1.NativeScriptElementSchemaRegistry, deps: [] },
             ]
         },
         multi: true
     },
 ];
 // Dynamic platform
-var _platformNativeScriptDynamic = core_1.createPlatformFactory(compiler_1.platformCoreDynamic, "nativeScriptDynamic", platform_common_1.COMMON_PROVIDERS.concat(exports.NS_COMPILER_PROVIDERS));
+var _platformNativeScriptDynamic = core_1.createPlatformFactory(platform_browser_dynamic_1.ɵplatformCoreDynamic, "nativeScriptDynamic", platform_common_1.COMMON_PROVIDERS.concat(exports.NS_COMPILER_PROVIDERS));
 function platformNativeScriptDynamic(options, extraProviders) {
     // Return raw platform to advanced users only if explicitly requested
     if (options && options.bootInExistingPage === true) {

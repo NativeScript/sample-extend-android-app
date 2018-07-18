@@ -7,14 +7,45 @@
  */
 import { Injector } from '../di';
 import { ErrorHandler } from '../error_handler';
+import { ComponentFactory } from '../linker/component_factory';
 import { NgModuleRef } from '../linker/ng_module_factory';
 import { QueryList } from '../linker/query_list';
 import { TemplateRef } from '../linker/template_ref';
 import { ViewContainerRef } from '../linker/view_container_ref';
 import { Renderer2, RendererFactory2, RendererType2 } from '../render/api';
-import { Sanitizer, SecurityContext } from '../security';
-export interface ViewDefinition {
-    factory: ViewDefinitionFactory | null;
+import { Sanitizer, SecurityContext } from '../sanitization/security';
+import { Type } from '../type';
+/**
+ * Factory for ViewDefinitions/NgModuleDefinitions.
+ * We use a function so we can reexeute it in case an error happens and use the given logger
+ * function to log the error from the definition of the node, which is shown in all browser
+ * logs.
+ */
+export interface DefinitionFactory<D extends Definition<any>> {
+    (logger: NodeLogger): D;
+}
+/**
+ * Function to call console.error at the right source location. This is an indirection
+ * via another function as browser will log the location that actually called
+ * `console.error`.
+ */
+export interface NodeLogger {
+    (): () => void;
+}
+export interface Definition<DF extends DefinitionFactory<any>> {
+    factory: DF | null;
+}
+export interface NgModuleDefinition extends Definition<NgModuleDefinitionFactory> {
+    providers: NgModuleProviderDef[];
+    providersByKey: {
+        [tokenKey: string]: NgModuleProviderDef;
+    };
+    modules: any[];
+    isRoot: boolean;
+}
+export interface NgModuleDefinitionFactory extends DefinitionFactory<NgModuleDefinition> {
+}
+export interface ViewDefinition extends Definition<ViewDefinitionFactory> {
     flags: ViewFlags;
     updateDirectives: ViewUpdateFn;
     updateRenderer: ViewUpdateFn;
@@ -37,22 +68,7 @@ export interface ViewDefinition {
      */
     nodeMatchedQueries: number;
 }
-/**
- * Factory for ViewDefinitions.
- * We use a function so we can reexeute it in case an error happens and use the given logger
- * function to log the error from the definition of the node, which is shown in all browser
- * logs.
- */
-export interface ViewDefinitionFactory {
-    (logger: NodeLogger): ViewDefinition;
-}
-/**
- * Function to call console.error at the right source location. This is an indirection
- * via another function as browser will log the location that actually called
- * `console.error`.
- */
-export interface NodeLogger {
-    (): () => void;
+export interface ViewDefinitionFactory extends DefinitionFactory<ViewDefinition> {
 }
 export interface ViewUpdateFn {
     (check: NodeCheckFn, view: ViewData): void;
@@ -69,7 +85,7 @@ export interface ViewHandleEventFn {
     (view: ViewData, nodeIndex: number, eventName: string, event: any): boolean;
 }
 /**
- * Bitmask for ViewDefintion.flags.
+ * Bitmask for ViewDefinition.flags.
  */
 export declare const enum ViewFlags {
     None = 0,
@@ -83,11 +99,12 @@ export declare const enum ViewFlags {
  */
 export interface NodeDef {
     flags: NodeFlags;
-    index: number;
+    nodeIndex: number;
+    checkIndex: number;
     parent: NodeDef | null;
     renderParent: NodeDef | null;
     /** this is checked against NgContentDef.index to find matched nodes */
-    ngContentIndex: number;
+    ngContentIndex: number | null;
     /** number of transitive children */
     childCount: number;
     /** aggregated NodeFlags for all transitive children (does not include self) **/
@@ -151,6 +168,7 @@ export declare const enum NodeFlags {
     PrivateProvider = 8192,
     TypeDirective = 16384,
     Component = 32768,
+    CatProviderNoDirective = 3840,
     CatProvider = 20224,
     OnInit = 65536,
     OnDestroy = 131072,
@@ -166,6 +184,7 @@ export declare const enum NodeFlags {
     TypeViewQuery = 134217728,
     StaticQuery = 268435456,
     DynamicQuery = 536870912,
+    TypeNgModule = 1073741824,
     CatQuery = 201326592,
     Types = 201347067,
 }
@@ -234,7 +253,13 @@ export interface ElementHandleEventFn {
 }
 export interface ProviderDef {
     token: any;
-    tokenKey: string;
+    value: any;
+    deps: DepDef[];
+}
+export interface NgModuleProviderDef {
+    flags: NodeFlags;
+    index: number;
+    token: any;
     value: any;
     deps: DepDef[];
 }
@@ -250,6 +275,7 @@ export declare const enum DepFlags {
     None = 0,
     SkipSelf = 1,
     Optional = 2,
+    Self = 4,
     Value = 8,
 }
 export interface TextDef {
@@ -277,6 +303,11 @@ export interface NgContentDef {
      */
     index: number;
 }
+export interface NgModuleData extends Injector, NgModuleRef<any> {
+    _def: NgModuleDefinition;
+    _parent: Injector;
+    _providers: any[];
+}
 /**
  * View instance data.
  * Attention: Adding fields to this is performance sensitive!
@@ -296,6 +327,7 @@ export interface ViewData {
     state: ViewState;
     oldValues: any[];
     disposables: DisposableFn[] | null;
+    initIndex: number;
 }
 /**
  * Bitmask of states
@@ -309,9 +341,17 @@ export declare const enum ViewState {
     CheckProjectedView = 32,
     CheckProjectedViews = 64,
     Destroyed = 128,
+    InitState_Mask = 1792,
+    InitState_BeforeInit = 0,
+    InitState_CallingOnInit = 256,
+    InitState_CallingAfterContentInit = 512,
+    InitState_CallingAfterViewInit = 768,
+    InitState_AfterInit = 1024,
     CatDetectChanges = 12,
     CatInit = 13,
 }
+export declare function shiftInitState(view: ViewData, priorInitState: ViewState, newInitState: ViewState): boolean;
+export declare function shouldCallLifecycleInitHook(view: ViewData, initState: ViewState, index: number): boolean;
 export interface DisposableFn {
     (): void;
 }
@@ -418,10 +458,22 @@ export declare const enum CheckType {
     CheckAndUpdate = 0,
     CheckNoChanges = 1,
 }
+export interface ProviderOverride {
+    token: any;
+    flags: NodeFlags;
+    value: any;
+    deps: ([DepFlags, any] | any)[];
+    deprecatedBehavior: boolean;
+}
 export interface Services {
     setCurrentNode(view: ViewData, nodeIndex: number): void;
     createRootView(injector: Injector, projectableNodes: any[][], rootSelectorOrNode: string | any, def: ViewDefinition, ngModule: NgModuleRef<any>, context?: any): ViewData;
-    createEmbeddedView(parent: ViewData, anchorDef: NodeDef, context?: any): ViewData;
+    createEmbeddedView(parent: ViewData, anchorDef: NodeDef, viewDef: ViewDefinition, context?: any): ViewData;
+    createComponentView(parentView: ViewData, nodeDef: NodeDef, viewDef: ViewDefinition, hostElement: any): ViewData;
+    createNgModuleRef(moduleType: Type<any>, parent: Injector, bootstrapComponents: Type<any>[], def: NgModuleDefinition): NgModuleRef<any>;
+    overrideProvider(override: ProviderOverride): void;
+    overrideComponentView(compType: Type<any>, compFactory: ComponentFactory<any>): void;
+    clearOverrides(): void;
     checkAndUpdateView(view: ViewData): void;
     checkNoChangesView(view: ViewData): void;
     destroyView(view: ViewData): void;

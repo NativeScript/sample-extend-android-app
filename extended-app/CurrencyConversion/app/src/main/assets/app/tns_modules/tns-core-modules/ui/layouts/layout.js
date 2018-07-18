@@ -40,15 +40,15 @@ var Layout = (function (_super) {
     };
     Layout.prototype.initNativeView = function () {
         _super.prototype.initNativeView.call(this);
-        this.nativeView[OWNER] = this;
+        this.nativeViewProtected[OWNER] = this;
     };
     Layout.prototype.disposeNativeView = function () {
-        this.nativeView[OWNER] = undefined;
+        this.nativeViewProtected[OWNER] = undefined;
         _super.prototype.disposeNativeView.call(this);
     };
     Layout.prototype.measure = function (widthMeasureSpec, heightMeasureSpec) {
         this._setCurrentMeasureSpecs(widthMeasureSpec, heightMeasureSpec);
-        var view = this.nativeView;
+        var view = this.nativeViewProtected;
         if (view) {
             if (layout_base_1.traceEnabled()) {
                 layout_base_1.traceWrite(this + " :measure: " + layout_base_1.layout.measureSpecToString(widthMeasureSpec) + ", " + layout_base_1.layout.measureSpecToString(heightMeasureSpec), layout_base_1.traceCategories.Layout);
@@ -58,7 +58,7 @@ var Layout = (function (_super) {
     };
     Layout.prototype.layout = function (left, top, right, bottom) {
         this._setCurrentLayoutBounds(left, top, right, bottom);
-        var view = this.nativeView;
+        var view = this.nativeViewProtected;
         if (view) {
             this.layoutNativeView(left, top, right, bottom);
             if (layout_base_1.traceEnabled()) {

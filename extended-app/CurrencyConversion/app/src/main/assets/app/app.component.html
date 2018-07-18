@@ -1,12 +1,1 @@
-<ActionBar title="Stock Ticker"></ActionBar>
-<GridLayout>
-    <ListView [items]="stocks" class="list-group">
-        <ng-template let-stock="item">
-            <GridLayout rows="auto, auto" columns="*, auto" class="list-group-item">
-                <Label class="h2" text="{{ stock.Symbol }}" row="0" col="0"></Label>
-                <Label text="{{ stock.Name }}" row="1" col="0"></Label>
-                <Label text="{{ stock.LastPrice }}" row="0" col="1"></Label>
-            </GridLayout>
-        </ng-template>
-    </ListView>
-</GridLayout>
+<page-router-outlet></page-router-outlet>

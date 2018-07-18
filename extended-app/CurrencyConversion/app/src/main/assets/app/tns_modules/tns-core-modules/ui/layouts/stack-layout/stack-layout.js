@@ -13,7 +13,7 @@ var StackLayout = (function (_super) {
         return new org.nativescript.widgets.StackLayout(this._context);
     };
     StackLayout.prototype[stack_layout_common_1.orientationProperty.setNative] = function (value) {
-        this.nativeView.setOrientation(value === "vertical" ? org.nativescript.widgets.Orientation.vertical : org.nativescript.widgets.Orientation.horizontal);
+        this.nativeViewProtected.setOrientation(value === "vertical" ? org.nativescript.widgets.Orientation.vertical : org.nativescript.widgets.Orientation.horizontal);
     };
     return StackLayout;
 }(stack_layout_common_1.StackLayoutBase));

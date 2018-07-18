@@ -1,4 +1,5 @@
 Object.defineProperty(exports, "__esModule", { value: true });
+var http_request_common_1 = require("./http-request-common");
 var debugger_1 = require("../../debugger/debugger");
 var HttpResponseEncoding;
 (function (HttpResponseEncoding) {
@@ -99,9 +100,8 @@ function onRequestComplete(requestId, result) {
             },
             toFile: function (destinationFilePath) {
                 var fs = require("file-system");
-                var fileName = callbacks.url;
                 if (!destinationFilePath) {
-                    destinationFilePath = fs.path.join(fs.knownFolders.documents().path, fileName.substring(fileName.lastIndexOf('/') + 1));
+                    destinationFilePath = http_request_common_1.getFilenameFromUrl(callbacks.url);
                 }
                 var stream;
                 try {
@@ -185,7 +185,7 @@ exports.request = request;
 function decodeResponse(raw, encoding) {
     var charsetName = "UTF-8";
     if (encoding === HttpResponseEncoding.GBK) {
-        charsetName = 'GBK';
+        charsetName = "GBK";
     }
     return raw.toString(charsetName);
 }

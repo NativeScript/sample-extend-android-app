@@ -41,6 +41,10 @@ var Observable = (function () {
     Observable.prototype.on = function (eventNames, callback, thisArg) {
         this.addEventListener(eventNames, callback, thisArg);
     };
+    Observable.prototype.once = function (event, callback, thisArg) {
+        var list = this._getEventList(event, true);
+        list.push({ callback: callback, thisArg: thisArg, once: true });
+    };
     Observable.prototype.off = function (eventNames, callback, thisArg) {
         this.removeEventListener(eventNames, callback, thisArg);
     };
@@ -96,6 +100,9 @@ var Observable = (function () {
         }
         for (var i = observers.length - 1; i >= 0; i--) {
             var entry = observers[i];
+            if (entry.once) {
+                observers.splice(i, 1);
+            }
             if (entry.thisArg) {
                 entry.callback.apply(entry.thisArg, [data]);
             }
@@ -147,9 +154,9 @@ var Observable = (function () {
         }
         return -1;
     };
+    Observable.propertyChangeEvent = "propertyChange";
     return Observable;
 }());
-Observable.propertyChangeEvent = "propertyChange";
 exports.Observable = Observable;
 var ObservableFromObject = (function (_super) {
     __extends(ObservableFromObject, _super);
@@ -186,18 +193,18 @@ function defineNewProperty(target, propertyName) {
 }
 function addPropertiesFromObject(observable, source, recursive) {
     if (recursive === void 0) { recursive = false; }
-    var isRecursive = recursive;
-    for (var prop in source) {
-        if (source.hasOwnProperty(prop)) {
-            if (isRecursive) {
-                if (!Array.isArray(source[prop]) && source[prop] && typeof source[prop] === 'object' && !(source[prop] instanceof Observable)) {
-                    source[prop] = fromObjectRecursive(source[prop]);
-                }
-            }
-            defineNewProperty(observable, prop);
-            observable.set(prop, source[prop]);
+    Object.keys(source).forEach(function (prop) {
+        var value = source[prop];
+        if (recursive
+            && !Array.isArray(value)
+            && value
+            && typeof value === "object"
+            && !(value instanceof Observable)) {
+            value = fromObjectRecursive(value);
         }
-    }
+        defineNewProperty(observable, prop);
+        observable.set(prop, value);
+    });
 }
 function fromObject(source) {
     var observable = new ObservableFromObject();

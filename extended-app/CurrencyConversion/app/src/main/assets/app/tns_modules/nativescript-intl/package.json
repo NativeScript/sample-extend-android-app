@@ -1,61 +1,33 @@
 {
-  "_args": [
-    [
-      {
-        "raw": "nativescript-intl@^3.0.0",
-        "scope": null,
-        "escapedName": "nativescript-intl",
-        "name": "nativescript-intl",
-        "rawSpec": "^3.0.0",
-        "spec": ">=3.0.0 <4.0.0",
-        "type": "range"
-      },
-      "D:\\work\\extending-app\\ns-stock-ticker\\node_modules\\nativescript-angular"
-    ]
-  ],
-  "_from": "nativescript-intl@>=3.0.0 <4.0.0",
+  "_from": "nativescript-intl@^3.0.0",
   "_id": "nativescript-intl@3.0.0",
-  "_inCache": true,
+  "_inBundle": false,
+  "_integrity": "sha1-gu6b59N3Fys8QpVzRyMDdijhhqc=",
   "_location": "/nativescript-intl",
-  "_nodeVersion": "6.9.4",
-  "_npmOperationalInternal": {
-    "host": "packages-12-west.internal.npmjs.com",
-    "tmp": "tmp/nativescript-intl-3.0.0.tgz_1492604410282_0.5742771958466619"
-  },
-  "_npmUser": {
-    "name": "tns-bot",
-    "email": "nativescript@telerik.com"
-  },
-  "_npmVersion": "3.10.10",
   "_phantomChildren": {},
   "_requested": {
+    "type": "range",
+    "registry": true,
     "raw": "nativescript-intl@^3.0.0",
-    "scope": null,
-    "escapedName": "nativescript-intl",
     "name": "nativescript-intl",
+    "escapedName": "nativescript-intl",
     "rawSpec": "^3.0.0",
-    "spec": ">=3.0.0 <4.0.0",
-    "type": "range"
+    "saveSpec": null,
+    "fetchSpec": "^3.0.0"
   },
   "_requiredBy": [
     "/nativescript-angular"
   ],
   "_resolved": "https://registry.npmjs.org/nativescript-intl/-/nativescript-intl-3.0.0.tgz",
   "_shasum": "82ee9be7d377172b3c4295734723037628e186a7",
-  "_shrinkwrap": null,
   "_spec": "nativescript-intl@^3.0.0",
-  "_where": "D:\\work\\extending-app\\ns-stock-ticker\\node_modules\\nativescript-angular",
+  "_where": "/Users/trifonov/Work/sample-extend-android-app-updated/ns-stock-ticker/node_modules/nativescript-angular",
   "author": {
     "name": "NativeScript Team"
   },
-  "dependencies": {},
+  "bundleDependencies": false,
+  "deprecated": false,
   "description": "Provides API for using Native date, time and number formatting with an API similar to Intl.js",
-  "devDependencies": {},
-  "directories": {},
-  "dist": {
-    "shasum": "82ee9be7d377172b3c4295734723037628e186a7",
-    "tarball": "https://registry.npmjs.org/nativescript-intl/-/nativescript-intl-3.0.0.tgz"
-  },
   "keywords": [
     "NativeScript",
     "localization",
@@ -64,16 +36,6 @@
     "currency",
     "nativescript-angular"
   ],
-  "maintainers": [
-    {
-      "name": "hdeshev",
-      "email": "hristo@deshev.com"
-    },
-    {
-      "name": "tns-bot",
-      "email": "nativescript@telerik.com"
-    }
-  ],
   "name": "nativescript-intl",
   "nativescript": {
     "platforms": {
@@ -81,8 +43,5 @@
       "ios": "3.0.0"
     }
   },
-  "optionalDependencies": {},
-  "readme": "ERROR: No README data found!",
-  "scripts": {},
   "version": "3.0.0"
 }

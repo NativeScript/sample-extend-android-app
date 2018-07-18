@@ -50,14 +50,18 @@ export declare class NSRouterLinkActive implements OnChanges, OnDestroy, AfterCo
     links: QueryList<NSRouterLink>;
     private classes;
     private subscription;
+    private active;
     nsRouterLinkActiveOptions: {
         exact: boolean;
     };
     constructor(router: Router, element: ElementRef, renderer: Renderer);
+    readonly isActive: boolean;
     ngAfterContentInit(): void;
     nsRouterLinkActive: string[] | string;
     ngOnChanges(_: {}): any;
     ngOnDestroy(): any;
     private update();
     private reduceList(currentUrlTree, q);
+    private isLinkActive(router);
+    private hasActiveLinks();
 }

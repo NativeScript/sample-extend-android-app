@@ -260,32 +260,32 @@ var GridLayoutBase = (function (_super) {
         configurable: true
     });
     GridLayoutBase.prototype.invalidate = function () {
-        this.requestLayout();
     };
-    GridLayoutBase.prototype._applyXmlAttribute = function (attributeName, attributeValue) {
-        if (attributeName === "columns") {
-            this._setColumns(attributeValue);
-            return true;
-        }
-        else if (attributeName === "rows") {
-            this._setRows(attributeValue);
-            return true;
-        }
-        return _super.prototype._applyXmlAttribute.call(this, attributeName, attributeValue);
-    };
-    GridLayoutBase.prototype._setColumns = function (value) {
-        var _this = this;
-        this.removeColumns();
-        parseAndAddItemSpecs(value, function (spec) { return _this.addColumn(spec); });
-    };
-    GridLayoutBase.prototype._setRows = function (value) {
-        var _this = this;
-        this.removeRows();
-        parseAndAddItemSpecs(value, function (spec) { return _this.addRow(spec); });
-    };
+    Object.defineProperty(GridLayoutBase.prototype, "rows", {
+        set: function (value) {
+            var _this = this;
+            this.removeRows();
+            parseAndAddItemSpecs(value, function (spec) { return _this.addRow(spec); });
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(GridLayoutBase.prototype, "columns", {
+        set: function (value) {
+            var _this = this;
+            this.removeColumns();
+            parseAndAddItemSpecs(value, function (spec) { return _this.addColumn(spec); });
+        },
+        enumerable: true,
+        configurable: true
+    });
+    GridLayoutBase = __decorate([
+        layout_base_1.CSSType("GridLayout")
+    ], GridLayoutBase);
     return GridLayoutBase;
 }(layout_base_1.LayoutBase));
 exports.GridLayoutBase = GridLayoutBase;
+GridLayoutBase.prototype.recycleNativeView = "auto";
 exports.columnProperty = new layout_base_1.Property({
     name: "col", defaultValue: 0,
     valueChanged: function (target, oldValue, newValue) {

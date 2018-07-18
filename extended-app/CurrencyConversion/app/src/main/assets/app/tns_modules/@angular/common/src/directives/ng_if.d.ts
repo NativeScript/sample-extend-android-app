@@ -42,7 +42,7 @@ import { TemplateRef, ViewContainerRef } from '@angular/core';
  * A common pattern is that we need to show a set of properties from the same object. If the
  * object is undefined, then we have to use the safe-traversal-operator `?.` to guard against
  * dereferencing a `null` value. This is especially the case when waiting on async data such as
- * when using the `async` pipe as shown in folowing example:
+ * when using the `async` pipe as shown in following example:
  *
  * ```
  * Hello {{ (userStream|async)?.last }}, {{ (userStream|async)?.first }}!
@@ -72,7 +72,6 @@ import { TemplateRef, ViewContainerRef } from '@angular/core';
  *
  * Simple form:
  * - `<div *ngIf="condition">...</div>`
- * - `<div template="ngIf condition">...</div>`
  * - `<ng-template [ngIf]="condition"><div>...</div></ng-template>`
  *
  * Form with an else block:
@@ -94,7 +93,7 @@ import { TemplateRef, ViewContainerRef } from '@angular/core';
  * <ng-template #elseBlock>...</ng-template>
  * ```
  *
- * @stable
+ *
  */
 export declare class NgIf {
     private _viewContainer;
@@ -105,13 +104,10 @@ export declare class NgIf {
     private _elseViewRef;
     constructor(_viewContainer: ViewContainerRef, templateRef: TemplateRef<NgIfContext>);
     ngIf: any;
-    ngIfThen: TemplateRef<NgIfContext>;
-    ngIfElse: TemplateRef<NgIfContext>;
+    ngIfThen: TemplateRef<NgIfContext> | null;
+    ngIfElse: TemplateRef<NgIfContext> | null;
     private _updateView();
 }
-/**
- * @stable
- */
 export declare class NgIfContext {
     $implicit: any;
     ngIf: any;

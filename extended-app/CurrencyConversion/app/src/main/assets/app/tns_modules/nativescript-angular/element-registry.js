@@ -1,9 +1,69 @@
 Object.defineProperty(exports, "__esModule", { value: true });
-var defaultViewMeta = {
-    skipAddToDom: false,
-};
+var view_1 = require("tns-core-modules/ui/core/view");
+var layout_base_1 = require("tns-core-modules/ui/layouts/layout-base");
+var page_1 = require("tns-core-modules/ui/page");
+var InvisibleNode = /** @class */ (function (_super) {
+    __extends(InvisibleNode, _super);
+    function InvisibleNode() {
+        var _this = _super.call(this) || this;
+        _this.nodeType = 1;
+        _this.nodeName = getClassName(_this);
+        return _this;
+    }
+    InvisibleNode.prototype.toString = function () {
+        return this.nodeName + "(" + this.id + ")";
+    };
+    return InvisibleNode;
+}(view_1.View));
+exports.InvisibleNode = InvisibleNode;
+var CommentNode = /** @class */ (function (_super) {
+    __extends(CommentNode, _super);
+    function CommentNode() {
+        var _this = _super.call(this) || this;
+        _this.meta = {
+            skipAddToDom: true,
+        };
+        _this.id = CommentNode.id.toString();
+        CommentNode.id += 1;
+        return _this;
+    }
+    CommentNode.id = 0;
+    return CommentNode;
+}(InvisibleNode));
+exports.CommentNode = CommentNode;
+var TextNode = /** @class */ (function (_super) {
+    __extends(TextNode, _super);
+    function TextNode() {
+        var _this = _super.call(this) || this;
+        _this.meta = {
+            skipAddToDom: true,
+        };
+        _this.id = TextNode.id.toString();
+        TextNode.id += 1;
+        return _this;
+    }
+    TextNode.id = 0;
+    return TextNode;
+}(InvisibleNode));
+exports.TextNode = TextNode;
+var getClassName = function (instance) { return instance.constructor.name; };
+var ɵ0 = getClassName;
+exports.ɵ0 = ɵ0;
+function isDetachedElement(element) {
+    return (element && element.meta && element.meta.skipAddToDom);
+}
+exports.isDetachedElement = isDetachedElement;
+function isView(view) {
+    return view instanceof view_1.View;
+}
+exports.isView = isView;
+function isInvisibleNode(view) {
+    return view instanceof InvisibleNode;
+}
+exports.isInvisibleNode = isInvisibleNode;
 var elementMap = new Map();
 var camelCaseSplit = /([a-z0-9])([A-Z])/g;
+var defaultViewMeta = { skipAddToDom: false };
 function registerElement(elementName, resolver, meta) {
     if (elementMap.has(elementName)) {
         throw new Error("Element for " + elementName + " already registered.");
@@ -31,12 +91,8 @@ function getViewClass(elementName) {
 }
 exports.getViewClass = getViewClass;
 function getViewMeta(nodeName) {
-    var meta = defaultViewMeta;
     var entry = elementMap.get(nodeName) || elementMap.get(nodeName.toLowerCase());
-    if (entry && entry.meta) {
-        meta = entry.meta;
-    }
-    return meta;
+    return (entry && entry.meta) || defaultViewMeta;
 }
 exports.getViewMeta = getViewMeta;
 function isKnownView(elementName) {
@@ -44,6 +100,43 @@ function isKnownView(elementName) {
         elementMap.has(elementName.toLowerCase());
 }
 exports.isKnownView = isKnownView;
+function getSingleViewRecursive(nodes, nestLevel) {
+    var actualNodes = nodes.filter(function (node) { return !(node instanceof InvisibleNode); });
+    if (actualNodes.length === 0) {
+        throw new Error("No suitable views found in list template! " +
+            ("Nesting level: " + nestLevel));
+    }
+    else if (actualNodes.length > 1) {
+        throw new Error("More than one view found in list template!" +
+            ("Nesting level: " + nestLevel));
+    }
+    var rootLayout = actualNodes[0];
+    if (!rootLayout) {
+        return getSingleViewRecursive(rootLayout.children, nestLevel + 1);
+    }
+    var parentLayout = rootLayout.parent;
+    if (parentLayout instanceof layout_base_1.LayoutBase) {
+        parentLayout.removeChild(rootLayout);
+    }
+    return rootLayout;
+}
+exports.getSingleViewRecursive = getSingleViewRecursive;
+var ɵ1 = function (parent, child, next) {
+    // Page cannot be added to Frame with _addChildFromBuilder (trows "use defaultPage" error)
+    if (isInvisibleNode(child)) {
+        return;
+    }
+    else if (child instanceof page_1.Page) {
+        parent.navigate({ create: function () { return child; } });
+    }
+    else {
+        throw new Error("Only a Page can be a child of Frame");
+    }
+};
+exports.ɵ1 = ɵ1;
+var frameMeta = {
+    insertChild: ɵ1
+};
 // Register default NativeScript components
 // Note: ActionBar related components are registerd together with action-bar directives.
 registerElement("AbsoluteLayout", function () { return require("tns-core-modules/ui/layouts/absolute-layout").AbsoluteLayout; });
@@ -53,6 +146,7 @@ registerElement("Button", function () { return require("tns-core-modules/ui/butt
 registerElement("ContentView", function () { return require("tns-core-modules/ui/content-view").ContentView; });
 registerElement("DatePicker", function () { return require("tns-core-modules/ui/date-picker").DatePicker; });
 registerElement("DockLayout", function () { return require("tns-core-modules/ui/layouts/dock-layout").DockLayout; });
+registerElement("Frame", function () { return require("tns-core-modules/ui/frame").Frame; }, frameMeta);
 registerElement("GridLayout", function () { return require("tns-core-modules/ui/layouts/grid-layout").GridLayout; });
 registerElement("HtmlView", function () { return require("tns-core-modules/ui/html-view").HtmlView; });
 registerElement("Image", function () { return require("tns-core-modules/ui/image").Image; });
@@ -83,6 +177,5 @@ registerElement("WrapLayout", function () { return require("tns-core-modules/ui/
 registerElement("FormattedString", function () { return require("tns-core-modules/text/formatted-string").FormattedString; });
 registerElement("Span", function () { return require("tns-core-modules/text/span").Span; });
 registerElement("DetachedContainer", function () { return require("tns-core-modules/ui/proxy-view-container").ProxyViewContainer; }, { skipAddToDom: true });
-registerElement("DetachedText", function () { return require("ui/placeholder").Placeholder; }, { skipAddToDom: true });
-registerElement("Comment", function () { return require("ui/placeholder").Placeholder; }, { skipAddToDom: false });
+registerElement("page-router-outlet", function () { return require("tns-core-modules/ui/frame").Frame; });
 //# sourceMappingURL=element-registry.js.map

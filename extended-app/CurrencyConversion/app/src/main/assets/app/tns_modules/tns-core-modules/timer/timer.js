@@ -11,8 +11,13 @@ function createHandlerAndGetId() {
 }
 function setTimeout(callback, milliseconds) {
     if (milliseconds === void 0) { milliseconds = 0; }
+    var args = [];
+    for (var _i = 2; _i < arguments.length; _i++) {
+        args[_i - 2] = arguments[_i];
+    }
     var id = createHandlerAndGetId();
-    var zoneBound = zonedCallback(callback);
+    var invoke = function () { return callback.apply(void 0, args); };
+    var zoneBound = zonedCallback(invoke);
     var runnable = new java.lang.Runnable({
         run: function () {
             zoneBound();
@@ -38,9 +43,14 @@ function clearTimeout(id) {
 exports.clearTimeout = clearTimeout;
 function setInterval(callback, milliseconds) {
     if (milliseconds === void 0) { milliseconds = 0; }
+    var args = [];
+    for (var _i = 2; _i < arguments.length; _i++) {
+        args[_i - 2] = arguments[_i];
+    }
     var id = createHandlerAndGetId();
     var handler = timeoutHandler;
-    var zoneBound = zonedCallback(callback);
+    var invoke = function () { return callback.apply(void 0, args); };
+    var zoneBound = zonedCallback(invoke);
     var runnable = new java.lang.Runnable({
         run: function () {
             zoneBound();

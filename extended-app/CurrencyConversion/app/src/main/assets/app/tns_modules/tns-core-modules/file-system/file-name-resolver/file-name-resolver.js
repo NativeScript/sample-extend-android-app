@@ -2,7 +2,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var platform_1 = require("../../platform");
 var file_system_1 = require("../file-system");
 var trace = require("../../trace");
-var appModule = require("../../application");
+var appCommonModule = require("../../application/application-common");
 var MIN_WH = "minWH";
 var MIN_W = "minW";
 var MIN_H = "minH";
@@ -185,6 +185,6 @@ function resolveFileName(path, ext) {
     return resolverInstance.resolveFileName(path, ext);
 }
 exports.resolveFileName = resolveFileName;
-appModule.on("cssChanged", function (args) { return resolverInstance = undefined; });
-appModule.on("livesync", function (args) { return resolverInstance && resolverInstance.clearCache(); });
+appCommonModule.on("cssChanged", function (args) { return resolverInstance = undefined; });
+appCommonModule.on("livesync", function (args) { return resolverInstance && resolverInstance.clearCache(); });
 //# sourceMappingURL=file-name-resolver.js.map

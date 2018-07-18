@@ -4,6 +4,7 @@ function __export(m) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var view_1 = require("../core/view");
 var image_asset_1 = require("../../image-asset");
+exports.ImageAsset = image_asset_1.ImageAsset;
 var image_source_1 = require("../../image-source");
 exports.ImageSource = image_source_1.ImageSource;
 exports.fromAsset = image_source_1.fromAsset;
@@ -29,9 +30,8 @@ var ImageBase = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    ImageBase.prototype._createImageSourceFromSrc = function () {
+    ImageBase.prototype._createImageSourceFromSrc = function (value) {
         var _this = this;
-        var value = this.src;
         var originalValue = value;
         var sync = this.loadMode === "sync";
         if (typeof value === "string" || value instanceof String) {
@@ -108,9 +108,13 @@ var ImageBase = (function (_super) {
             this.isLoading = false;
         }
     };
+    ImageBase = __decorate([
+        view_1.CSSType("Image")
+    ], ImageBase);
     return ImageBase;
 }(view_1.View));
 exports.ImageBase = ImageBase;
+ImageBase.prototype.recycleNativeView = "auto";
 exports.imageSourceProperty = new view_1.Property({ name: "imageSource" });
 exports.imageSourceProperty.register(ImageBase);
 exports.srcProperty = new view_1.Property({ name: "src" });
@@ -123,4 +127,8 @@ exports.stretchProperty = new view_1.Property({ name: "stretch", defaultValue: "
 exports.stretchProperty.register(ImageBase);
 exports.tintColorProperty = new view_1.InheritedCssProperty({ name: "tintColor", cssName: "tint-color", equalityComparer: view_1.Color.equals, valueConverter: function (value) { return new view_1.Color(value); } });
 exports.tintColorProperty.register(view_1.Style);
+exports.decodeHeightProperty = new view_1.Property({ name: "decodeHeight", defaultValue: { value: 0, unit: "dip" }, valueConverter: view_1.Length.parse });
+exports.decodeHeightProperty.register(ImageBase);
+exports.decodeWidthProperty = new view_1.Property({ name: "decodeWidth", defaultValue: { value: 0, unit: "dip" }, valueConverter: view_1.Length.parse });
+exports.decodeWidthProperty.register(ImageBase);
 //# sourceMappingURL=image-common.js.map

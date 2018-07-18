@@ -36,6 +36,11 @@ export interface StaticSymbolResolverHost {
      * `path/to/containingFile.ts` containing `import {...} from 'module-name'`.
      */
     moduleNameToFileName(moduleName: string, containingFile?: string): string | null;
+    /**
+     * Get a file suitable for display to the user that should be relative to the project directory
+     * or the current directory.
+     */
+    getOutputName(filePath: string): string;
 }
 /**
  * This class is responsible for loading metadata per symbol,
@@ -56,7 +61,8 @@ export declare class StaticSymbolResolver {
     private importAs;
     private symbolResourcePaths;
     private symbolFromFile;
-    constructor(host: StaticSymbolResolverHost, staticSymbolCache: StaticSymbolCache, summaryResolver: SummaryResolver<StaticSymbol>, errorRecorder?: (error: any, fileName?: string) => void);
+    private knownFileNameToModuleNames;
+    constructor(host: StaticSymbolResolverHost, staticSymbolCache: StaticSymbolCache, summaryResolver: SummaryResolver<StaticSymbol>, errorRecorder?: ((error: any, fileName?: string | undefined) => void) | undefined);
     resolveSymbol(staticSymbol: StaticSymbol): ResolvedStaticSymbol;
     /**
      * getImportAs produces a symbol that can be used to import the given symbol.
@@ -67,7 +73,7 @@ export declare class StaticSymbolResolver {
      *
      * @param staticSymbol the symbol for which to generate a import symbol
      */
-    getImportAs(staticSymbol: StaticSymbol): StaticSymbol | null;
+    getImportAs(staticSymbol: StaticSymbol, useSummaries?: boolean): StaticSymbol | null;
     /**
      * getResourcePath produces the path to the original location of the symbol and should
      * be used to determine the relative location of resource references recorded in
@@ -79,7 +85,9 @@ export declare class StaticSymbolResolver {
      * has. If the symbol is not a type the result is null.
      */
     getTypeArity(staticSymbol: StaticSymbol): number | null;
+    getKnownModuleName(filePath: string): string | null;
     recordImportAs(sourceSymbol: StaticSymbol, targetSymbol: StaticSymbol): void;
+    recordModuleNameForFileName(fileName: string, moduleName: string): void;
     /**
      * Invalidate all information derived from the given file.
      *
@@ -97,6 +105,14 @@ export declare class StaticSymbolResolver {
      * @param members a symbol for a static member of the named type
      */
     getStaticSymbol(declarationFile: string, name: string, members?: string[]): StaticSymbol;
+    /**
+     * hasDecorators checks a file's metadata for the presence of decorators without evaluating the
+     * metadata.
+     *
+     * @param filePath the absolute path to examine for decorators.
+     * @returns true if any class in the file has a decorator.
+     */
+    hasDecorators(filePath: string): boolean;
     getSymbolsOf(filePath: string): StaticSymbol[];
     private _createSymbolsOf(filePath);
     private createResolvedSymbol(sourceSymbol, topLevelPath, topLevelSymbolNames, metadata);
@@ -110,3 +126,4 @@ export declare class StaticSymbolResolver {
     private resolveModule(module, containingFile?);
 }
 export declare function unescapeIdentifier(identifier: string): string;
+export declare function unwrapResolvedMetadata(metadata: any): any;

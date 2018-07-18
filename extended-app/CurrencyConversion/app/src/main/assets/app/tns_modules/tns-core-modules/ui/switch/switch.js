@@ -20,11 +20,11 @@ function initializeCheckedChangeListener() {
             var owner = this.owner;
             switch_common_1.checkedProperty.nativeValueChange(owner, isChecked);
         };
+        CheckedChangeListenerImpl = __decorate([
+            Interfaces([android.widget.CompoundButton.OnCheckedChangeListener])
+        ], CheckedChangeListenerImpl);
         return CheckedChangeListenerImpl;
     }(java.lang.Object));
-    CheckedChangeListenerImpl = __decorate([
-        Interfaces([android.widget.CompoundButton.OnCheckedChangeListener])
-    ], CheckedChangeListenerImpl);
     CheckedChangeListener = CheckedChangeListenerImpl;
 }
 var Switch = (function (_super) {
@@ -42,11 +42,11 @@ var Switch = (function (_super) {
     };
     Switch.prototype.initNativeView = function () {
         _super.prototype.initNativeView.call(this);
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         nativeView.listener.owner = this;
     };
     Switch.prototype.disposeNativeView = function () {
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         nativeView.listener.owner = null;
         _super.prototype.disposeNativeView.call(this);
     };
@@ -54,17 +54,17 @@ var Switch = (function (_super) {
         return false;
     };
     Switch.prototype[switch_common_1.checkedProperty.setNative] = function (value) {
-        this.nativeView.setChecked(value);
+        this.nativeViewProtected.setChecked(value);
     };
     Switch.prototype[switch_common_1.colorProperty.getDefault] = function () {
         return -1;
     };
     Switch.prototype[switch_common_1.colorProperty.setNative] = function (value) {
         if (value instanceof switch_common_1.Color) {
-            this.nativeView.getThumbDrawable().setColorFilter(value.android, android.graphics.PorterDuff.Mode.SRC_IN);
+            this.nativeViewProtected.getThumbDrawable().setColorFilter(value.android, android.graphics.PorterDuff.Mode.SRC_IN);
         }
         else {
-            this.nativeView.getThumbDrawable().clearColorFilter();
+            this.nativeViewProtected.getThumbDrawable().clearColorFilter();
         }
     };
     Switch.prototype[switch_common_1.backgroundColorProperty.getDefault] = function () {
@@ -72,10 +72,10 @@ var Switch = (function (_super) {
     };
     Switch.prototype[switch_common_1.backgroundColorProperty.setNative] = function (value) {
         if (value instanceof switch_common_1.Color) {
-            this.nativeView.getTrackDrawable().setColorFilter(value.android, android.graphics.PorterDuff.Mode.SRC_IN);
+            this.nativeViewProtected.getTrackDrawable().setColorFilter(value.android, android.graphics.PorterDuff.Mode.SRC_IN);
         }
         else {
-            this.nativeView.getTrackDrawable().clearColorFilter();
+            this.nativeViewProtected.getTrackDrawable().clearColorFilter();
         }
     };
     Switch.prototype[switch_common_1.backgroundInternalProperty.getDefault] = function () {

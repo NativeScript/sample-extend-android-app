@@ -16,6 +16,10 @@ var FileSystemAccess = (function () {
         var javaFile = new java.io.File(path);
         return new Date(javaFile.lastModified());
     };
+    FileSystemAccess.prototype.getFileSize = function (path) {
+        var javaFile = new java.io.File(path);
+        return javaFile.length();
+    };
     FileSystemAccess.prototype.getParent = function (path, onError) {
         try {
             var javaFile = new java.io.File(path);

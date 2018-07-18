@@ -9,6 +9,8 @@ var application = require("../../application");
 __export(require("./action-bar-common"));
 var R_ID_HOME = 0x0102002c;
 var ACTION_ITEM_ID_OFFSET = 10000;
+var DEFAULT_ELEVATION = 4;
+var AppCompatTextView;
 var actionItemIdGenerator = ACTION_ITEM_ID_OFFSET;
 function generateItemId() {
     actionItemIdGenerator++;
@@ -20,6 +22,7 @@ function initializeMenuItemClickListener() {
     if (MenuItemClickListener) {
         return;
     }
+    AppCompatTextView = android.support.v7.widget.AppCompatTextView;
     var MenuItemClickListenerImpl = (function (_super) {
         __extends(MenuItemClickListenerImpl, _super);
         function MenuItemClickListenerImpl(owner) {
@@ -31,11 +34,11 @@ function initializeMenuItemClickListener() {
             var itemId = item.getItemId();
             return this.owner._onAndroidItemSelected(itemId);
         };
+        MenuItemClickListenerImpl = __decorate([
+            Interfaces([android.support.v7.widget.Toolbar.OnMenuItemClickListener])
+        ], MenuItemClickListenerImpl);
         return MenuItemClickListenerImpl;
     }(java.lang.Object));
-    MenuItemClickListenerImpl = __decorate([
-        Interfaces([android.support.v7.widget.Toolbar.OnMenuItemClickListener])
-    ], MenuItemClickListenerImpl);
     MenuItemClickListener = MenuItemClickListenerImpl;
     appResources = application.android.context.getResources();
 }
@@ -143,10 +146,10 @@ var ActionBar = (function (_super) {
     };
     ActionBar.prototype.initNativeView = function () {
         _super.prototype.initNativeView.call(this);
-        this.nativeView.menuItemClickListener.owner = this;
+        this.nativeViewProtected.menuItemClickListener.owner = this;
     };
     ActionBar.prototype.disposeNativeView = function () {
-        this.nativeView.menuItemClickListener.owner = null;
+        this.nativeViewProtected.menuItemClickListener.owner = null;
         _super.prototype.disposeNativeView.call(this);
     };
     ActionBar.prototype.onLoaded = function () {
@@ -154,15 +157,15 @@ var ActionBar = (function (_super) {
         this.update();
     };
     ActionBar.prototype.update = function () {
-        if (!this.nativeView) {
+        if (!this.nativeViewProtected) {
             return;
         }
         var page = this.page;
         if (!page.frame || !page.frame._getNavBarVisible(page)) {
-            this.nativeView.setVisibility(android.view.View.GONE);
+            this.nativeViewProtected.setVisibility(android.view.View.GONE);
             return;
         }
-        this.nativeView.setVisibility(android.view.View.VISIBLE);
+        this.nativeViewProtected.setVisibility(android.view.View.VISIBLE);
         this._addActionItems();
         this._updateTitleAndTitleView();
         this._updateIcon();
@@ -194,15 +197,15 @@ var ActionBar = (function (_super) {
             if (systemIcon !== undefined) {
                 var systemResourceId = getSystemResourceId(systemIcon);
                 if (systemResourceId) {
-                    this.nativeView.setNavigationIcon(systemResourceId);
+                    this.nativeViewProtected.setNavigationIcon(systemResourceId);
                 }
             }
             else if (navButton.icon) {
                 var drawableOrId = getDrawableOrResourceId(navButton.icon, appResources);
-                this.nativeView.setNavigationIcon(drawableOrId);
+                this.nativeViewProtected.setNavigationIcon(drawableOrId);
             }
             var navBtn_1 = new WeakRef(navButton);
-            this.nativeView.setNavigationOnClickListener(new android.view.View.OnClickListener({
+            this.nativeViewProtected.setNavigationOnClickListener(new android.view.View.OnClickListener({
                 onClick: function (v) {
                     var owner = navBtn_1.get();
                     if (owner) {
@@ -212,7 +215,7 @@ var ActionBar = (function (_super) {
             }));
         }
         else {
-            this.nativeView.setNavigationIcon(null);
+            this.nativeViewProtected.setNavigationIcon(null);
         }
     };
     ActionBar.prototype._updateIcon = function () {
@@ -222,36 +225,36 @@ var ActionBar = (function (_super) {
             if (icon !== undefined) {
                 var drawableOrId = getDrawableOrResourceId(icon, appResources);
                 if (drawableOrId) {
-                    this.nativeView.setLogo(drawableOrId);
+                    this.nativeViewProtected.setLogo(drawableOrId);
                 }
             }
             else {
                 var defaultIcon = application.android.nativeApp.getApplicationInfo().icon;
-                this.nativeView.setLogo(defaultIcon);
+                this.nativeViewProtected.setLogo(defaultIcon);
             }
         }
         else {
-            this.nativeView.setLogo(null);
+            this.nativeViewProtected.setLogo(null);
         }
     };
     ActionBar.prototype._updateTitleAndTitleView = function () {
         if (!this.titleView) {
             var title = this.title;
             if (title !== undefined) {
-                this.nativeView.setTitle(title);
+                this.nativeViewProtected.setTitle(title);
             }
             else {
                 var appContext = application.android.context;
                 var appInfo = appContext.getApplicationInfo();
                 var appLabel = appContext.getPackageManager().getApplicationLabel(appInfo);
                 if (appLabel) {
-                    this.nativeView.setTitle(appLabel);
+                    this.nativeViewProtected.setTitle(appLabel);
                 }
             }
         }
     };
     ActionBar.prototype._addActionItems = function () {
-        var menu = this.nativeView.getMenu();
+        var menu = this.nativeViewProtected.getMenu();
         var items = this.actionItems.getVisibleItems();
         menu.clear();
         for (var i = 0; i < items.length; i++) {
@@ -282,31 +285,35 @@ var ActionBar = (function (_super) {
         }
     };
     ActionBar._setOnClickListener = function (item) {
+        var weakRef = new WeakRef(item);
         item.actionView.android.setOnClickListener(new android.view.View.OnClickListener({
             onClick: function (v) {
-                item._raiseTap();
+                var owner = weakRef.get();
+                if (owner) {
+                    owner._raiseTap();
+                }
             }
         }));
     };
     ActionBar.prototype._onTitlePropertyChanged = function () {
-        if (this.nativeView) {
+        if (this.nativeViewProtected) {
             this._updateTitleAndTitleView();
         }
     };
     ActionBar.prototype._onIconPropertyChanged = function () {
-        if (this.nativeView) {
+        if (this.nativeViewProtected) {
             this._updateIcon();
         }
     };
     ActionBar.prototype._addViewToNativeVisualTree = function (child, atIndex) {
         if (atIndex === void 0) { atIndex = Number.MAX_VALUE; }
         _super.prototype._addViewToNativeVisualTree.call(this, child);
-        if (this.nativeView && child.nativeView) {
-            if (atIndex >= this.nativeView.getChildCount()) {
-                this.nativeView.addView(child.nativeView);
+        if (this.nativeViewProtected && child.nativeViewProtected) {
+            if (atIndex >= this.nativeViewProtected.getChildCount()) {
+                this.nativeViewProtected.addView(child.nativeViewProtected);
             }
             else {
-                this.nativeView.addView(child.nativeView, atIndex);
+                this.nativeViewProtected.addView(child.nativeViewProtected, atIndex);
             }
             return true;
         }
@@ -314,31 +321,62 @@ var ActionBar = (function (_super) {
     };
     ActionBar.prototype._removeViewFromNativeVisualTree = function (child) {
         _super.prototype._removeViewFromNativeVisualTree.call(this, child);
-        if (this.nativeView && child.nativeView) {
-            this.nativeView.removeView(child.nativeView);
+        if (this.nativeViewProtected && child.nativeViewProtected) {
+            this.nativeViewProtected.removeView(child.nativeViewProtected);
         }
     };
     ActionBar.prototype[action_bar_common_1.colorProperty.getDefault] = function () {
+        var nativeView = this.nativeViewProtected;
         if (!defaultTitleTextColor) {
-            var textView = new android.widget.TextView(this._context);
-            defaultTitleTextColor = textView.getTextColors().getDefaultColor();
+            var tv = getAppCompatTextView(nativeView);
+            if (!tv) {
+                var title = nativeView.getTitle();
+                nativeView.setTitle("");
+                tv = getAppCompatTextView(nativeView);
+                if (title) {
+                    nativeView.setTitle(title);
+                }
+            }
+            defaultTitleTextColor = tv ? tv.getTextColors().getDefaultColor() : -570425344;
         }
         return defaultTitleTextColor;
     };
     ActionBar.prototype[action_bar_common_1.colorProperty.setNative] = function (value) {
         var color = value instanceof action_bar_common_1.Color ? value.android : value;
-        this.nativeView.setTitleTextColor(color);
+        this.nativeViewProtected.setTitleTextColor(color);
+    };
+    ActionBar.prototype[action_bar_common_1.flatProperty.setNative] = function (value) {
+        var compat = android.support.v4.view.ViewCompat;
+        if (compat.setElevation) {
+            if (value) {
+                compat.setElevation(this.nativeViewProtected, 0);
+            }
+            else {
+                var val = DEFAULT_ELEVATION * action_bar_common_1.layout.getDisplayDensity();
+                compat.setElevation(this.nativeViewProtected, val);
+            }
+        }
     };
     return ActionBar;
 }(action_bar_common_1.ActionBarBase));
 exports.ActionBar = ActionBar;
+function getAppCompatTextView(toolbar) {
+    for (var i = 0, count = toolbar.getChildCount(); i < count; i++) {
+        var child = toolbar.getChildAt(i);
+        if (child instanceof AppCompatTextView) {
+            return child;
+        }
+    }
+    return null;
+}
+ActionBar.prototype.recycleNativeView = "auto";
 var defaultTitleTextColor;
 function getDrawableOrResourceId(icon, resources) {
     if (typeof icon !== "string") {
         return undefined;
     }
     if (icon.indexOf(utils_1.RESOURCE_PREFIX) === 0) {
-        var resourceId = resources.getIdentifier(icon.substr(utils_1.RESOURCE_PREFIX.length), 'drawable', application.android.packageName);
+        var resourceId = resources.getIdentifier(icon.substr(utils_1.RESOURCE_PREFIX.length), "drawable", application.android.packageName);
         if (resourceId > 0) {
             return resourceId;
         }

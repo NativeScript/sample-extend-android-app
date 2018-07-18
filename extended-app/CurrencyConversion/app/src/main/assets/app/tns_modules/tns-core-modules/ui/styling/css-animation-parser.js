@@ -1,50 +1,51 @@
 Object.defineProperty(exports, "__esModule", { value: true });
-var color_1 = require("../../color");
+var properties_1 = require("../core/properties");
 var keyframe_animation_1 = require("../animation/keyframe-animation");
 var converters_1 = require("../styling/converters");
-var animationProperties = {
-    "animation-name": function (info, declaration) { return info.name = declaration.value; },
-    "animation-duration": function (info, declaration) { return info.duration = converters_1.timeConverter(declaration.value); },
-    "animation-delay": function (info, declaration) { return info.delay = converters_1.timeConverter(declaration.value); },
-    "animation-timing-function": function (info, declaration) { return info.curve = converters_1.animationTimingFunctionConverter(declaration.value); },
-    "animation-iteration-count": function (info, declaration) { return declaration.value === "infinite" ? info.iterations = Number.MAX_VALUE : info.iterations = converters_1.numberConverter(declaration.value); },
-    "animation-direction": function (info, declaration) { return info.isReverse = declaration.value === "reverse"; },
-    "animation-fill-mode": function (info, declaration) { return info.isForwards = declaration.value === "forwards"; }
-};
+var style_properties_1 = require("../styling/style-properties");
+var ANIMATION_PROPERTY_HANDLERS = Object.freeze({
+    "animation-name": function (info, value) { return info.name = value; },
+    "animation-duration": function (info, value) { return info.duration = converters_1.timeConverter(value); },
+    "animation-delay": function (info, value) { return info.delay = converters_1.timeConverter(value); },
+    "animation-timing-function": function (info, value) { return info.curve = converters_1.animationTimingFunctionConverter(value); },
+    "animation-iteration-count": function (info, value) { return info.iterations = value === "infinite" ? Number.MAX_VALUE : parseFloat(value); },
+    "animation-direction": function (info, value) { return info.isReverse = value === "reverse"; },
+    "animation-fill-mode": function (info, value) { return info.isForwards = value === "forwards"; }
+});
 var CssAnimationParser = (function () {
     function CssAnimationParser() {
     }
     CssAnimationParser.keyframeAnimationsFromCSSDeclarations = function (declarations) {
-        var animations = new Array();
-        var animationInfo = undefined;
         if (declarations === null || declarations === undefined) {
             return undefined;
         }
-        for (var _i = 0, declarations_1 = declarations; _i < declarations_1.length; _i++) {
-            var declaration = declarations_1[_i];
-            if (declaration.property === "animation") {
-                keyframeAnimationsFromCSSProperty(declaration.value, animations);
+        var animations = new Array();
+        var animationInfo = undefined;
+        declarations.forEach(function (_a) {
+            var property = _a.property, value = _a.value;
+            if (property === "animation") {
+                keyframeAnimationsFromCSSProperty(value, animations);
             }
             else {
-                var propertyHandler = animationProperties[declaration.property];
+                var propertyHandler = ANIMATION_PROPERTY_HANDLERS[property];
                 if (propertyHandler) {
                     if (animationInfo === undefined) {
                         animationInfo = new keyframe_animation_1.KeyframeAnimationInfo();
                         animations.push(animationInfo);
                     }
-                    propertyHandler(animationInfo, declaration);
+                    propertyHandler(animationInfo, value);
                 }
             }
-        }
+        });
         return animations.length === 0 ? undefined : animations;
     };
-    CssAnimationParser.keyframesArrayFromCSS = function (cssKeyframes) {
+    CssAnimationParser.keyframesArrayFromCSS = function (keyframes) {
         var parsedKeyframes = new Array();
-        for (var _i = 0, _a = cssKeyframes.keyframes; _i < _a.length; _i++) {
-            var keyframe = _a[_i];
-            var declarations = parseKeyframeDeclarations(keyframe);
-            for (var _b = 0, _c = keyframe.values; _b < _c.length; _b++) {
-                var time_1 = _c[_b];
+        for (var _i = 0, keyframes_1 = keyframes; _i < keyframes_1.length; _i++) {
+            var keyframe = keyframes_1[_i];
+            var declarations = parseKeyframeDeclarations(keyframe.declarations);
+            for (var _a = 0, _b = keyframe.values; _a < _b.length; _a++) {
+                var time_1 = _b[_a];
                 if (time_1 === "from") {
                     time_1 = 0;
                 }
@@ -66,8 +67,8 @@ var CssAnimationParser = (function () {
                     current.duration = time_1;
                     parsedKeyframes[time_1] = current;
                 }
-                for (var _d = 0, _e = keyframe.declarations; _d < _e.length; _d++) {
-                    var declaration = _e[_d];
+                for (var _c = 0, _d = keyframe.declarations; _c < _d.length; _c++) {
+                    var declaration = _d[_c];
                     if (declaration.property === "animation-timing-function") {
                         current.curve = converters_1.animationTimingFunctionConverter(declaration.value);
                     }
@@ -120,132 +121,21 @@ function keyframeAnimationsFromCSSProperty(value, animations) {
         }
     }
 }
-function getTransformationValues(value) {
-    var newTransform = converters_1.transformConverter(value);
-    var array = new Array();
-    var values = undefined;
-    for (var transform in newTransform) {
-        switch (transform) {
-            case "scaleX":
-                array.push({ propertyName: "scaleX", value: parseFloat(newTransform[transform]) });
-                break;
-            case "scaleY":
-                array.push({ propertyName: "scaleY", value: parseFloat(newTransform[transform]) });
-                break;
-            case "scale":
-            case "scale3d":
-                values = newTransform[transform].split(",");
-                if (values.length === 2 || values.length === 3) {
-                    array.push({ propertyName: "scaleX", value: parseFloat(values[0]) });
-                    array.push({ propertyName: "scaleY", value: parseFloat(values[1]) });
-                }
-                break;
-            case "translateX":
-                array.push({ propertyName: "translateX", value: parseFloat(newTransform[transform]) });
-                break;
-            case "translateY":
-                array.push({ propertyName: "translateY", value: parseFloat(newTransform[transform]) });
-                break;
-            case "translate":
-            case "translate3d":
-                values = newTransform[transform].split(",");
-                if (values.length === 2 || values.length === 3) {
-                    array.push({ propertyName: "translateX", value: parseFloat(values[0]) });
-                    array.push({ propertyName: "translateY", value: parseFloat(values[1]) });
-                }
-                break;
-            case "rotate":
-                var text = newTransform[transform];
-                var val = parseFloat(text);
-                if (text.slice(-3) === "rad") {
-                    val = val * (180.0 / Math.PI);
-                }
-                array.push({ propertyName: "rotate", value: val });
-                break;
-            case "none":
-                array.push({ propertyName: "scaleX", value: 1 });
-                array.push({ propertyName: "scaleY", value: 1 });
-                array.push({ propertyName: "translateX", value: 0 });
-                array.push({ propertyName: "translateY", value: 0 });
-                array.push({ propertyName: "rotate", value: 0 });
-                break;
+function parseKeyframeDeclarations(unparsedKeyframeDeclarations) {
+    var declarations = unparsedKeyframeDeclarations
+        .reduce(function (declarations, _a) {
+        var unparsedProperty = _a.property, unparsedValue = _a.value;
+        var property = properties_1.CssAnimationProperty._getByCssName(unparsedProperty);
+        if (typeof unparsedProperty === "string" && property && property._valueConverter) {
+            declarations[property.name] = property._valueConverter(unparsedValue);
         }
-    }
-    return array;
+        else if (typeof unparsedValue === "string" && unparsedProperty === "transform") {
+            var transformations = style_properties_1.transformConverter(unparsedValue);
+            Object.assign(declarations, transformations);
+        }
+        return declarations;
+    }, {});
+    return Object.keys(declarations).map(function (property) { return ({ property: property, value: declarations[property] }); });
 }
-function parseKeyframeDeclarations(keyframe) {
-    var declarations = {};
-    var transforms = { scale: undefined, translate: undefined };
-    for (var _i = 0, _a = keyframe.declarations; _i < _a.length; _i++) {
-        var declaration = _a[_i];
-        var propertyName = declaration.property;
-        var value = declaration.value;
-        if (propertyName === "opacity") {
-            declarations[propertyName] = parseFloat(value);
-        }
-        else if (propertyName === "transform") {
-            var values = getTransformationValues(value);
-            if (values) {
-                for (var _b = 0, values_2 = values; _b < values_2.length; _b++) {
-                    var pair = values_2[_b];
-                    if (!preprocessAnimationValues(pair.propertyName, pair.value, transforms)) {
-                        declarations[pair.propertyName] = pair.value;
-                    }
-                }
-            }
-            delete declarations[propertyName];
-        }
-        else if (propertyName === "backgroundColor" || propertyName === "background-color") {
-            declarations["backgroundColor"] = new color_1.Color(value);
-        }
-        else {
-            declarations[propertyName] = value;
-        }
-    }
-    if (transforms.scale !== undefined) {
-        declarations["scale"] = transforms.scale;
-    }
-    if (transforms.translate !== undefined) {
-        declarations["translate"] = transforms.translate;
-    }
-    var array = new Array();
-    for (var declaration in declarations) {
-        var keyframeDeclaration = {};
-        keyframeDeclaration.property = declaration;
-        keyframeDeclaration.value = declarations[declaration];
-        array.push(keyframeDeclaration);
-    }
-    return array;
-}
-function preprocessAnimationValues(propertyName, value, transforms) {
-    if (propertyName === "scaleX") {
-        if (transforms.scale === undefined) {
-            transforms.scale = { x: 1, y: 1 };
-        }
-        transforms.scale.x = value;
-        return true;
-    }
-    if (propertyName === "scaleY") {
-        if (transforms.scale === undefined) {
-            transforms.scale = { x: 1, y: 1 };
-        }
-        transforms.scale.y = value;
-        return true;
-    }
-    if (propertyName === "translateX") {
-        if (transforms.translate === undefined) {
-            transforms.translate = { x: 0, y: 0 };
-        }
-        transforms.translate.x = value;
-        return true;
-    }
-    if (propertyName === "translateY") {
-        if (transforms.translate === undefined) {
-            transforms.translate = { x: 0, y: 0 };
-        }
-        transforms.translate.y = value;
-        return true;
-    }
-    return false;
-}
+exports.parseKeyframeDeclarations = parseKeyframeDeclarations;
 //# sourceMappingURL=css-animation-parser.js.map

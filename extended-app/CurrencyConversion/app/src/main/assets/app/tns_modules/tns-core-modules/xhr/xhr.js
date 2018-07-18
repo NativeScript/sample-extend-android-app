@@ -16,9 +16,11 @@ var XMLHttpRequest = (function () {
         this.DONE = 4;
         this._responseType = "";
         this.textTypes = [
-            'text/plain',
-            'application/xml',
-            'text/html'
+            "text/plain",
+            "application/xml",
+            "application/rss+xml",
+            "text/html",
+            "text/xml"
         ];
         this._listeners = new Map();
         this._readyState = this.UNSENT;
@@ -57,7 +59,7 @@ var XMLHttpRequest = (function () {
         this._headers = null;
         this._status = null;
         if (types.isDefined(this._options)) {
-            if (types.isString(data) && this._options.method !== 'GET') {
+            if (types.isString(data) && this._options.method !== "GET") {
                 this._options.content = data;
             }
             else if (data instanceof FormData) {
@@ -112,10 +114,10 @@ var XMLHttpRequest = (function () {
         return result;
     };
     XMLHttpRequest.prototype._setResponseType = function () {
-        var header = this.getResponseHeader('Content-Type');
+        var header = this.getResponseHeader("Content-Type");
         var contentType = header && header.toLowerCase();
         if (contentType) {
-            if (contentType.indexOf('application/json') >= 0 || contentType.indexOf('+json') >= 0) {
+            if (contentType.indexOf("application/json") >= 0 || contentType.indexOf("+json") >= 0) {
                 this.responseType = XMLHttpRequestResponseType.json;
             }
             else if (this.isTextContentType(contentType)) {
@@ -127,8 +129,8 @@ var XMLHttpRequest = (function () {
         }
     };
     XMLHttpRequest.prototype.addEventListener = function (eventName, handler) {
-        if (eventName !== 'load' && eventName !== 'error') {
-            throw new Error('Event not supported: ' + eventName);
+        if (eventName !== "load" && eventName !== "error") {
+            throw new Error("Event not supported: " + eventName);
         }
         var handlers = this._listeners.get(eventName) || [];
         handlers.push(handler);
@@ -160,9 +162,7 @@ var XMLHttpRequest = (function () {
         }
         var result = "";
         for (var i in this._headers) {
-            if (i !== "set-cookie" && i !== "set-cookie2") {
-                result += i + ": " + this._headers[i] + "\r\n";
-            }
+            result += i + ": " + this._headers[i] + "\r\n";
         }
         return result.substr(0, result.length - 2);
     };
@@ -215,13 +215,13 @@ var XMLHttpRequest = (function () {
                 if (types.isFunction(this.onerror)) {
                     this.onerror(error);
                 }
-                this.emitEvent('error', error);
+                this.emitEvent("error", error);
             }
             else {
                 if (types.isFunction(this.onload)) {
                     this.onload();
                 }
-                this.emitEvent('load');
+                this.emitEvent("load");
             }
         }
     };

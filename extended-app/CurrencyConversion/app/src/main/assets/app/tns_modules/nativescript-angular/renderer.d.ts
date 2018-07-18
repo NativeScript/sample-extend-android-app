@@ -2,10 +2,14 @@ import { NgZone, Renderer2, RendererFactory2, RendererType2, RendererStyleFlags2
 import { Device } from "tns-core-modules/platform";
 import { View } from "tns-core-modules/ui/core/view";
 import { ViewUtil } from "./view-util";
-import { NgView } from "./element-registry";
+import { NgView, InvisibleNode } from "./element-registry";
 export declare const COMPONENT_VARIABLE = "%COMP%";
 export declare const HOST_ATTR: string;
 export declare const CONTENT_ATTR: string;
+export interface ElementReference {
+    previous: NgView;
+    next: NgView;
+}
 export declare class NativeScriptRendererFactory implements RendererFactory2 {
     private zone;
     private componentRenderers;
@@ -24,15 +28,15 @@ export declare class NativeScriptRenderer extends Renderer2 {
         [key: string]: any;
     };
     constructor(rootView: NgView, zone: NgZone, viewUtil: ViewUtil);
-    appendChild(parent: any, newChild: NgView): void;
-    insertBefore(parent: NgView, newChild: NgView, refChildIndex: number): void;
+    appendChild(parent: NgView, newChild: NgView): void;
+    insertBefore(parent: NgView, newChild: NgView, {previous, next}: ElementReference): void;
     removeChild(parent: any, oldChild: NgView): void;
     selectRootElement(selector: string): NgView;
     parentNode(node: NgView): any;
-    nextSibling(node: NgView): number;
-    createComment(_value: any): NgView;
+    nextSibling(node: NgView): ElementReference;
+    createComment(_value: any): InvisibleNode;
     createElement(name: any, _namespace: string): NgView;
-    createText(_value: string): NgView;
+    createText(_value: string): InvisibleNode;
     createViewRoot(hostElement: NgView): NgView;
     projectNodes(parentElement: NgView, nodes: NgView[]): void;
     destroy(): void;

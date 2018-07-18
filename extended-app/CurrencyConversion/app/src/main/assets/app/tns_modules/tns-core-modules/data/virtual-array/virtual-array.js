@@ -7,12 +7,12 @@ var ADD = "add";
 var ChangeType = (function () {
     function ChangeType() {
     }
+    ChangeType.Add = ADD;
+    ChangeType.Delete = DELETE;
+    ChangeType.Update = UPDATE;
+    ChangeType.Splice = CHANGE;
     return ChangeType;
 }());
-ChangeType.Add = ADD;
-ChangeType.Delete = DELETE;
-ChangeType.Update = UPDATE;
-ChangeType.Splice = CHANGE;
 exports.ChangeType = ChangeType;
 var VirtualArray = (function (_super) {
     __extends(VirtualArray, _super);
@@ -132,9 +132,9 @@ var VirtualArray = (function (_super) {
             });
         }
     };
+    VirtualArray.changeEvent = CHANGE;
+    VirtualArray.itemsLoadingEvent = "itemsLoading";
     return VirtualArray;
 }(observable_1.Observable));
-VirtualArray.changeEvent = CHANGE;
-VirtualArray.itemsLoadingEvent = "itemsLoading";
 exports.VirtualArray = VirtualArray;
 //# sourceMappingURL=virtual-array.js.map

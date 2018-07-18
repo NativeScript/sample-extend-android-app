@@ -5,6 +5,7 @@ var trace_1 = require("../../trace");
 exports.traceEnabled = trace_1.isEnabled;
 exports.traceWrite = trace_1.write;
 exports.traceCategories = trace_1.categories;
+exports.traceType = trace_1.messageType;
 var Properties;
 (function (Properties) {
     Properties.opacity = "opacity";
@@ -46,11 +47,15 @@ var AnimationBase = (function () {
         }
         this._playSequentially = playSequentially;
     }
+    AnimationBase.prototype._rejectAlreadyPlaying = function () {
+        var reason = "Animation is already playing.";
+        trace_1.write(reason, trace_1.categories.Animation, trace_1.messageType.warn);
+        return new Promise(function (resolve, reject) {
+            reject(reason);
+        });
+    };
     AnimationBase.prototype.play = function () {
         var _this = this;
-        if (this.isPlaying) {
-            throw new Error("Animation is already playing.");
-        }
         var animationFinishedPromise = new Promise(function (resolve, reject) {
             _this._resolve = resolve;
             _this._reject = reject;
@@ -78,9 +83,6 @@ var AnimationBase = (function () {
         };
     };
     AnimationBase.prototype.cancel = function () {
-        if (!this.isPlaying) {
-            throw new Error("Animation is not currently playing.");
-        }
     };
     Object.defineProperty(AnimationBase.prototype, "isPlaying", {
         get: function () {

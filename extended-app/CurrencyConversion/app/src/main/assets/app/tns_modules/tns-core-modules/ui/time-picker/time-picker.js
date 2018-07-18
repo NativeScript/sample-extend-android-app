@@ -25,11 +25,11 @@ function initializeTimeChangedListener() {
             var validTime = time_picker_common_1.getValidTime(timePicker, hour, minute);
             time_picker_common_1.timeProperty.nativeValueChange(timePicker, new Date(0, 0, 0, validTime.hour, validTime.minute));
         };
+        TimeChangedListenerImpl = __decorate([
+            Interfaces([android.widget.TimePicker.OnTimeChangedListener])
+        ], TimeChangedListenerImpl);
         return TimeChangedListenerImpl;
     }(java.lang.Object));
-    TimeChangedListenerImpl = __decorate([
-        Interfaces([android.widget.TimePicker.OnTimeChangedListener])
-    ], TimeChangedListenerImpl);
     TimeChangedListener = TimeChangedListenerImpl;
 }
 var apiLevel;
@@ -49,7 +49,7 @@ var TimePicker = (function (_super) {
     };
     TimePicker.prototype.initNativeView = function () {
         _super.prototype.initNativeView.call(this);
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         nativeView.listener.owner = this;
         var calendar = nativeView.calendar;
         var hour = time_picker_common_1.hourProperty.isSet(this) ? this.hour : calendar.get(java.util.Calendar.HOUR_OF_DAY);
@@ -63,10 +63,10 @@ var TimePicker = (function (_super) {
         this.updatingNativeValue = true;
         try {
             if (apiLevel >= 23) {
-                this.nativeView.setMinute(value);
+                this.nativeViewProtected.setMinute(value);
             }
             else {
-                this.nativeView.setCurrentMinute(new java.lang.Integer(value));
+                this.nativeViewProtected.setCurrentMinute(new java.lang.Integer(value));
             }
         }
         finally {
@@ -77,10 +77,10 @@ var TimePicker = (function (_super) {
         this.updatingNativeValue = true;
         try {
             if (apiLevel >= 23) {
-                this.nativeView.setHour(value);
+                this.nativeViewProtected.setHour(value);
             }
             else {
-                this.nativeView.setCurrentHour(new java.lang.Integer(value));
+                this.nativeViewProtected.setCurrentHour(new java.lang.Integer(value));
             }
         }
         finally {

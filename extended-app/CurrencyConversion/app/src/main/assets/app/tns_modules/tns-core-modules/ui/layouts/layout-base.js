@@ -19,25 +19,25 @@ var LayoutBase = (function (_super) {
         return { value: this._defaultPaddingTop, unit: "px" };
     };
     LayoutBase.prototype[layout_base_common_1.paddingTopProperty.setNative] = function (value) {
-        org.nativescript.widgets.ViewHelper.setPaddingTop(this.nativeView, layout_base_common_1.Length.toDevicePixels(value, 0) + layout_base_common_1.Length.toDevicePixels(this.style.borderTopWidth, 0));
+        org.nativescript.widgets.ViewHelper.setPaddingTop(this.nativeViewProtected, layout_base_common_1.Length.toDevicePixels(value, 0) + layout_base_common_1.Length.toDevicePixels(this.style.borderTopWidth, 0));
     };
     LayoutBase.prototype[layout_base_common_1.paddingRightProperty.getDefault] = function () {
         return { value: this._defaultPaddingRight, unit: "px" };
     };
     LayoutBase.prototype[layout_base_common_1.paddingRightProperty.setNative] = function (value) {
-        org.nativescript.widgets.ViewHelper.setPaddingRight(this.nativeView, layout_base_common_1.Length.toDevicePixels(value, 0) + layout_base_common_1.Length.toDevicePixels(this.style.borderRightWidth, 0));
+        org.nativescript.widgets.ViewHelper.setPaddingRight(this.nativeViewProtected, layout_base_common_1.Length.toDevicePixels(value, 0) + layout_base_common_1.Length.toDevicePixels(this.style.borderRightWidth, 0));
     };
     LayoutBase.prototype[layout_base_common_1.paddingBottomProperty.getDefault] = function () {
         return { value: this._defaultPaddingBottom, unit: "px" };
     };
     LayoutBase.prototype[layout_base_common_1.paddingBottomProperty.setNative] = function (value) {
-        org.nativescript.widgets.ViewHelper.setPaddingBottom(this.nativeView, layout_base_common_1.Length.toDevicePixels(value, 0) + layout_base_common_1.Length.toDevicePixels(this.style.borderBottomWidth, 0));
+        org.nativescript.widgets.ViewHelper.setPaddingBottom(this.nativeViewProtected, layout_base_common_1.Length.toDevicePixels(value, 0) + layout_base_common_1.Length.toDevicePixels(this.style.borderBottomWidth, 0));
     };
     LayoutBase.prototype[layout_base_common_1.paddingLeftProperty.getDefault] = function () {
         return { value: this._defaultPaddingLeft, unit: "px" };
     };
     LayoutBase.prototype[layout_base_common_1.paddingLeftProperty.setNative] = function (value) {
-        org.nativescript.widgets.ViewHelper.setPaddingLeft(this.nativeView, layout_base_common_1.Length.toDevicePixels(value, 0) + layout_base_common_1.Length.toDevicePixels(this.style.borderLeftWidth, 0));
+        org.nativescript.widgets.ViewHelper.setPaddingLeft(this.nativeViewProtected, layout_base_common_1.Length.toDevicePixels(value, 0) + layout_base_common_1.Length.toDevicePixels(this.style.borderLeftWidth, 0));
     };
     return LayoutBase;
 }(layout_base_common_1.LayoutBaseCommon));

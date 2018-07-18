@@ -1,50 +1,27 @@
 {
-  "_args": [
-    [
-      {
-        "raw": "nativescript-angular@~3.0.0",
-        "scope": null,
-        "escapedName": "nativescript-angular",
-        "name": "nativescript-angular",
-        "rawSpec": "~3.0.0",
-        "spec": ">=3.0.0 <3.1.0",
-        "type": "range"
-      },
-      "D:\\work\\extending-app\\ns-stock-ticker\\node_modules\\tns-template-hello-world-ng"
-    ]
-  ],
-  "_from": "nativescript-angular@>=3.0.0 <3.1.0",
-  "_id": "nativescript-angular@3.0.0",
-  "_inCache": true,
+  "_from": "nativescript-angular@~6.0.0",
+  "_id": "nativescript-angular@6.0.6",
+  "_inBundle": false,
+  "_integrity": "sha512-9P/JfmHbPVfsJb1zrU5QEKVFsxAWgqymf+U85n4Od0H+N8tm69+wPTEf+luMcNXlyC/iB2L9RqYloxml4q9Elw==",
   "_location": "/nativescript-angular",
-  "_nodeVersion": "6.7.0",
-  "_npmOperationalInternal": {
-    "host": "packages-18-east.internal.npmjs.com",
-    "tmp": "tmp/nativescript-angular-3.0.0.tgz_1493814760937_0.7105445384513587"
-  },
-  "_npmUser": {
-    "name": "tns-bot",
-    "email": "nativescript@telerik.com"
-  },
-  "_npmVersion": "3.10.3",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "nativescript-angular@~3.0.0",
-    "scope": null,
-    "escapedName": "nativescript-angular",
+    "type": "range",
+    "registry": true,
+    "raw": "nativescript-angular@~6.0.0",
     "name": "nativescript-angular",
-    "rawSpec": "~3.0.0",
-    "spec": ">=3.0.0 <3.1.0",
-    "type": "range"
+    "escapedName": "nativescript-angular",
+    "rawSpec": "~6.0.0",
+    "saveSpec": null,
+    "fetchSpec": "~6.0.0"
   },
   "_requiredBy": [
     "/tns-template-hello-world-ng"
   ],
-  "_resolved": "https://registry.npmjs.org/nativescript-angular/-/nativescript-angular-3.0.0.tgz",
-  "_shasum": "401c5eae895c22a44010c16f443910d2aa5af6ee",
-  "_shrinkwrap": null,
-  "_spec": "nativescript-angular@~3.0.0",
-  "_where": "D:\\work\\extending-app\\ns-stock-ticker\\node_modules\\tns-template-hello-world-ng",
+  "_resolved": "https://registry.npmjs.org/nativescript-angular/-/nativescript-angular-6.0.6.tgz",
+  "_shasum": "3cc0e754dc4211ef9b5005c791d723260f2e38e6",
+  "_spec": "nativescript-angular@~6.0.0",
+  "_where": "/Users/trifonov/Work/sample-extend-android-app-updated/ns-stock-ticker/node_modules/tns-template-hello-world-ng",
   "author": {
     "name": "NativeScript Team"
   },
@@ -54,6 +31,7 @@
   "bugs": {
     "url": "https://github.com/NativeScript/nativescript-angular/issues"
   },
+  "bundleDependencies": false,
   "contributors": [
     {
       "name": "Hristo Deshev",
@@ -72,28 +50,25 @@
     "nativescript-intl": "^3.0.0",
     "reflect-metadata": "^0.1.8"
   },
+  "deprecated": false,
   "description": "An Angular renderer that lets you build mobile apps with NativeScript.",
   "devDependencies": {
-    "@angular/animations": "~4.0.0 || ~4.1.0",
-    "@angular/common": "~4.0.0 || ~4.1.0",
-    "@angular/compiler": "~4.0.0 || ~4.1.0",
-    "@angular/compiler-cli": "~4.0.0 || ~4.1.0",
-    "@angular/core": "~4.0.0 || ~4.1.0",
-    "@angular/forms": "~4.0.0 || ~4.1.0",
-    "@angular/http": "~4.0.0 || ~4.1.0",
-    "@angular/platform-browser": "~4.0.0 || ~4.1.0",
-    "@angular/router": "~4.0.0 || ~4.1.0",
-    "codelyzer": "^3.0.1",
-    "rxjs": "^5.0.1",
-    "tns-core-modules": "internal-preview",
-    "tslint": "^5.1.0",
-    "typescript": "^2.3.2",
-    "zone.js": "^0.8.4"
-  },
-  "directories": {},
-  "dist": {
-    "shasum": "401c5eae895c22a44010c16f443910d2aa5af6ee",
-    "tarball": "https://registry.npmjs.org/nativescript-angular/-/nativescript-angular-3.0.0.tgz"
+    "@angular/animations": "~6.0.6",
+    "@angular/common": "~6.0.6",
+    "@angular/compiler": "~6.0.6",
+    "@angular/compiler-cli": "~6.0.6",
+    "@angular/core": "~6.0.6",
+    "@angular/forms": "~6.0.6",
+    "@angular/http": "~6.0.6",
+    "@angular/platform-browser": "~6.0.6",
+    "@angular/platform-browser-dynamic": "~6.0.6",
+    "@angular/router": "~6.0.6",
+    "codelyzer": "^4.3.0",
+    "rxjs": "~6.1.0",
+    "tns-core-modules": "next",
+    "tslint": "^5.5.0",
+    "typescript": "~2.7.2",
+    "zone.js": "^0.8.26"
   },
   "homepage": "https://www.nativescript.org/",
   "keywords": [
@@ -101,20 +76,6 @@
     "Angular"
   ],
   "license": "Apache-2.0",
-  "maintainers": [
-    {
-      "name": "hdeshev",
-      "email": "hristo@deshev.com"
-    },
-    {
-      "name": "tns-bot",
-      "email": "nativescript@telerik.com"
-    },
-    {
-      "name": "vakrilov",
-      "email": "alexander.vakrilov@gmail.com"
-    }
-  ],
   "name": "nativescript-angular",
   "nativescript": {
     "platforms": {
@@ -122,21 +83,20 @@
       "ios": "3.0.0"
     }
   },
-  "optionalDependencies": {},
   "peerDependencies": {
-    "@angular/common": "~4.0.0 || ~4.1.0",
-    "@angular/compiler": "~4.0.0 || ~4.1.0",
-    "@angular/core": "~4.0.0 || ~4.1.0",
-    "@angular/forms": "~4.0.0 || ~4.1.0",
-    "@angular/http": "~4.0.0 || ~4.1.0",
-    "@angular/platform-browser": "~4.0.0 || ~4.1.0",
-    "@angular/router": "~4.0.0 || ~4.1.0",
-    "rxjs": "^5.0.1",
-    "tns-core-modules": "^3.0.0 || ^3.0.0-rc.1 || >=3.0.0-2017",
-    "zone.js": "^0.8.4"
+    "@angular/platform-browser-dynamic": "~6.0.6",
+    "@angular/common": "~6.0.6",
+    "@angular/compiler": "~6.0.6",
+    "@angular/core": "~6.0.6",
+    "@angular/forms": "~6.0.6",
+    "@angular/http": "~6.0.6",
+    "@angular/platform-browser": "~6.0.6",
+    "@angular/router": "~6.0.6",
+    "rxjs": "~6.0.0 || >=6.1.0",
+    "tns-core-modules": "^4.0.0 || >4.0.0- || >4.1.0-",
+    "zone.js": "^0.8.26",
+    "typescript": "~2.7.2"
   },
-  "private": false,
-  "readme": "ERROR: No README data found!",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/NativeScript/nativescript-angular.git"
@@ -144,8 +104,10 @@
   "scripts": {
     "ngc": "ngc -p tsconfig.json",
     "postinstall": "node postinstall.js",
+    "prepare": "npm run ngc",
     "tsc": "tsc -p tsconfig.json",
-    "tslint": "tslint --project tsconfig.json --config tslint.json --type-check"
+    "tsc-w": "tsc -p tsconfig.json -w",
+    "tslint": "tslint --project tsconfig.json --config tslint.json"
   },
-  "version": "3.0.0"
+  "version": "6.0.6"
 }

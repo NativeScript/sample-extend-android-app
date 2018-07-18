@@ -1,1 +1,1 @@
-include ':app', ':nativescript', ':widgets-release'
+include ':app'

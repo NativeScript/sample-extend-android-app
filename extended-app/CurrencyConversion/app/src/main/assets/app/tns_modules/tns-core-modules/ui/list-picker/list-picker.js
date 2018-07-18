@@ -20,11 +20,11 @@ function initializeNativeClasses() {
         FormatterImpl.prototype.format = function (index) {
             return this.owner._getItemAsString(index);
         };
+        FormatterImpl = __decorate([
+            Interfaces([android.widget.NumberPicker.Formatter])
+        ], FormatterImpl);
         return FormatterImpl;
     }(java.lang.Object));
-    FormatterImpl = __decorate([
-        Interfaces([android.widget.NumberPicker.Formatter])
-    ], FormatterImpl);
     var ValueChangeListenerImpl = (function (_super) {
         __extends(ValueChangeListenerImpl, _super);
         function ValueChangeListenerImpl(owner) {
@@ -35,11 +35,11 @@ function initializeNativeClasses() {
         ValueChangeListenerImpl.prototype.onValueChange = function (picker, oldValue, newValue) {
             list_picker_common_1.selectedIndexProperty.nativeValueChange(this.owner, newValue);
         };
+        ValueChangeListenerImpl = __decorate([
+            Interfaces([android.widget.NumberPicker.OnValueChangeListener])
+        ], ValueChangeListenerImpl);
         return ValueChangeListenerImpl;
     }(java.lang.Object));
-    ValueChangeListenerImpl = __decorate([
-        Interfaces([android.widget.NumberPicker.OnValueChangeListener])
-    ], ValueChangeListenerImpl);
     Formatter = FormatterImpl;
     ValueChangeListener = ValueChangeListenerImpl;
 }
@@ -87,7 +87,7 @@ var ListPicker = (function (_super) {
     };
     ListPicker.prototype.initNativeView = function () {
         _super.prototype.initNativeView.call(this);
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         this._selectorWheelPaint = getSelectorWheelPaint(nativeView);
         nativeView.formatter.owner = this;
         nativeView.valueChangedListener.owner = this;
@@ -98,13 +98,13 @@ var ListPicker = (function (_super) {
         }
     };
     ListPicker.prototype.disposeNativeView = function () {
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         nativeView.formatter.owner = null;
         nativeView.valueChangedListener.owner = null;
         _super.prototype.disposeNativeView.call(this);
     };
     ListPicker.prototype._fixNumberPickerRendering = function () {
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         nativeView.setFormatter(null);
         nativeView.setFormatter(nativeView.formatter);
         var editText = nativeView.editText;
@@ -119,7 +119,7 @@ var ListPicker = (function (_super) {
     };
     ListPicker.prototype[list_picker_common_1.selectedIndexProperty.setNative] = function (value) {
         if (value >= 0) {
-            this.nativeView.setValue(value);
+            this.nativeViewProtected.setValue(value);
         }
     };
     ListPicker.prototype[list_picker_common_1.itemsProperty.getDefault] = function () {
@@ -127,12 +127,12 @@ var ListPicker = (function (_super) {
     };
     ListPicker.prototype[list_picker_common_1.itemsProperty.setNative] = function (value) {
         var maxValue = value && value.length > 0 ? value.length - 1 : 0;
-        this.nativeView.setMaxValue(maxValue);
+        this.nativeViewProtected.setMaxValue(maxValue);
         this._fixNumberPickerRendering();
         list_picker_common_1.selectedIndexProperty.coerce(this);
     };
     ListPicker.prototype[list_picker_common_1.colorProperty.getDefault] = function () {
-        var editText = this.nativeView.editText;
+        var editText = this.nativeViewProtected.editText;
         return {
             wheelColor: this._selectorWheelPaint.getColor(),
             textColor: editText ? editText.getTextColors().getDefaultColor() : -1
@@ -149,7 +149,7 @@ var ListPicker = (function (_super) {
             wheelColor = value.wheelColor;
         }
         this._selectorWheelPaint.setColor(wheelColor);
-        var editText = this.nativeView.editText;
+        var editText = this.nativeViewProtected.editText;
         if (editText) {
             editText.setTextColor(color);
         }

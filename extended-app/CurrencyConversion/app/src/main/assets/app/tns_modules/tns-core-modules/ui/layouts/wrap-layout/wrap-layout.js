@@ -13,13 +13,13 @@ var WrapLayout = (function (_super) {
         return new org.nativescript.widgets.WrapLayout(this._context);
     };
     WrapLayout.prototype[wrap_layout_common_1.orientationProperty.setNative] = function (value) {
-        this.nativeView.setOrientation(value === "vertical" ? org.nativescript.widgets.Orientation.vertical : org.nativescript.widgets.Orientation.horizontal);
+        this.nativeViewProtected.setOrientation(value === "vertical" ? org.nativescript.widgets.Orientation.vertical : org.nativescript.widgets.Orientation.horizontal);
     };
     WrapLayout.prototype[wrap_layout_common_1.itemWidthProperty.setNative] = function (value) {
-        this.nativeView.setItemWidth(wrap_layout_common_1.Length.toDevicePixels(value, -1));
+        this.nativeViewProtected.setItemWidth(wrap_layout_common_1.Length.toDevicePixels(value, -1));
     };
     WrapLayout.prototype[wrap_layout_common_1.itemHeightProperty.setNative] = function (value) {
-        this.nativeView.setItemHeight(wrap_layout_common_1.Length.toDevicePixels(value, -1));
+        this.nativeViewProtected.setItemHeight(wrap_layout_common_1.Length.toDevicePixels(value, -1));
     };
     return WrapLayout;
 }(wrap_layout_common_1.WrapLayoutBase));

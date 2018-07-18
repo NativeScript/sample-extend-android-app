@@ -1,5 +1,8 @@
 import { ElementRef, OnDestroy } from "@angular/core";
+import { ActionItem, NavigationButton } from "tns-core-modules/ui/action-bar";
 import { Page } from "tns-core-modules/ui/page";
+export declare function isActionItem(view: any): view is ActionItem;
+export declare function isNavigationButton(view: any): view is NavigationButton;
 export declare class ActionBarComponent {
     element: ElementRef;
     private page;

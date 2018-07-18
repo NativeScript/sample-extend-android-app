@@ -136,8 +136,8 @@ var Cache = (function (_super) {
         var request = this._queue.pop();
         this._download(request);
     };
+    Cache.downloadedEvent = "downloaded";
     return Cache;
 }(observable.Observable));
-Cache.downloadedEvent = "downloaded";
 exports.Cache = Cache;
 //# sourceMappingURL=image-cache-common.js.map

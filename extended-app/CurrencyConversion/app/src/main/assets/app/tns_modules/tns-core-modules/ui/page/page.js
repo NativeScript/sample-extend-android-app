@@ -5,77 +5,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var page_common_1 = require("./page-common");
 var action_bar_1 = require("../action-bar");
 var grid_layout_1 = require("../layouts/grid-layout");
-var constants_1 = require("./constants");
 var platform_1 = require("../../platform");
+var profiling_1 = require("../../profiling");
 __export(require("./page-common"));
 var SYSTEM_UI_FLAG_LIGHT_STATUS_BAR = 0x00002000;
 var STATUS_BAR_LIGHT_BCKG = -657931;
 var STATUS_BAR_DARK_BCKG = 1711276032;
-var DialogFragment;
-function initializeDialogFragment() {
-    if (DialogFragment) {
-        return;
-    }
-    var DialogFragmentImpl = (function (_super) {
-        __extends(DialogFragmentImpl, _super);
-        function DialogFragmentImpl(_owner, _fullscreen, _shownCallback, _dismissCallback) {
-            var _this = _super.call(this) || this;
-            _this._owner = _owner;
-            _this._fullscreen = _fullscreen;
-            _this._shownCallback = _shownCallback;
-            _this._dismissCallback = _dismissCallback;
-            return global.__native(_this);
-        }
-        DialogFragmentImpl.prototype.onCreateDialog = function (savedInstanceState) {
-            var dialog = new android.app.Dialog(this._owner._context);
-            dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);
-            this._owner.horizontalAlignment = this._fullscreen ? "stretch" : "center";
-            this._owner.verticalAlignment = this._fullscreen ? "stretch" : "middle";
-            this._owner.actionBarHidden = true;
-            var nativeView = this._owner.nativeView;
-            var layoutParams = nativeView.getLayoutParams();
-            if (!layoutParams) {
-                layoutParams = new org.nativescript.widgets.CommonLayoutParams();
-                nativeView.setLayoutParams(layoutParams);
-            }
-            dialog.setContentView(this._owner.nativeView, layoutParams);
-            var window = dialog.getWindow();
-            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
-            if (this._fullscreen) {
-                window.setLayout(android.view.ViewGroup.LayoutParams.FILL_PARENT, android.view.ViewGroup.LayoutParams.FILL_PARENT);
-            }
-            return dialog;
-        };
-        DialogFragmentImpl.prototype.onStart = function () {
-            _super.prototype.onStart.call(this);
-            if (!this._owner.isLoaded) {
-                this._owner.onLoaded();
-            }
-            this._shownCallback();
-        };
-        DialogFragmentImpl.prototype.onDestroyView = function () {
-            _super.prototype.onDestroyView.call(this);
-            if (this._owner.isLoaded) {
-                this._owner.onUnloaded();
-            }
-            this._owner._isAddedToNativeVisualTree = false;
-            this._owner._tearDownUI(true);
-        };
-        DialogFragmentImpl.prototype.onDismiss = function (dialog) {
-            _super.prototype.onDismiss.call(this, dialog);
-            this._dismissCallback();
-        };
-        return DialogFragmentImpl;
-    }(android.app.DialogFragment));
-    ;
-    DialogFragment = DialogFragmentImpl;
-}
 var Page = (function (_super) {
     __extends(Page, _super);
     function Page() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this._isBackNavigation = false;
-        return _this;
+        return _super !== null && _super.apply(this, arguments) || this;
     }
     Page.prototype.createNativeView = function () {
         var layout = new org.nativescript.widgets.GridLayout(this._context);
@@ -85,10 +24,10 @@ var Page = (function (_super) {
     };
     Page.prototype.initNativeView = function () {
         _super.prototype.initNativeView.call(this);
-        this.nativeView.setBackgroundColor(-1);
+        this.nativeViewProtected.setBackgroundColor(-1);
     };
     Page.prototype._addViewToNativeVisualTree = function (child, atIndex) {
-        if (this.nativeView && child.nativeView) {
+        if (this.nativeViewProtected && child.nativeViewProtected) {
             if (child instanceof action_bar_1.ActionBar) {
                 grid_layout_1.GridLayout.setRow(child, 0);
                 child.horizontalAlignment = "stretch";
@@ -106,41 +45,8 @@ var Page = (function (_super) {
             this.updateActionBar();
         }
     };
-    Page.prototype._tearDownUI = function (force) {
-        var skipDetached = !force && this.frame.android.cachePagesOnNavigate && !this._isBackNavigation;
-        if (!skipDetached) {
-            _super.prototype._tearDownUI.call(this);
-            this._isAddedToNativeVisualTree = false;
-        }
-    };
-    Page.prototype.onNavigatedFrom = function (isBackNavigation) {
-        this._isBackNavigation = isBackNavigation;
-        _super.prototype.onNavigatedFrom.call(this, isBackNavigation);
-    };
-    Page.prototype._showNativeModalView = function (parent, context, closeCallback, fullscreen) {
-        var _this = this;
-        _super.prototype._showNativeModalView.call(this, parent, context, closeCallback, fullscreen);
-        if (!this.backgroundColor) {
-            this.backgroundColor = new page_common_1.Color("White");
-        }
-        this._setupUI(parent._context);
-        this._isAddedToNativeVisualTree = true;
-        initializeDialogFragment();
-        this._dialogFragment = new DialogFragment(this, !!fullscreen, function () { return _this._raiseShownModallyEvent(); }, function () { return _this.closeModal(); });
-        _super.prototype._raiseShowingModallyEvent.call(this);
-        this._dialogFragment.show(parent.frame.android.activity.getFragmentManager(), constants_1.DIALOG_FRAGMENT_TAG);
-    };
-    Page.prototype._hideNativeModalView = function (parent) {
-        this._dialogFragment.dismissAllowingStateLoss();
-        this._dialogFragment = null;
-        parent._modal = undefined;
-        _super.prototype._hideNativeModalView.call(this, parent);
-    };
     Page.prototype.updateActionBar = function () {
         this.actionBar.update();
-    };
-    Page.prototype[page_common_1.actionBarHiddenProperty.getDefault] = function () {
-        return undefined;
     };
     Page.prototype[page_common_1.actionBarHiddenProperty.setNative] = function (value) {
         this.updateActionBar();
@@ -188,6 +94,9 @@ var Page = (function (_super) {
             window_4.setStatusBarColor(color);
         }
     };
+    __decorate([
+        profiling_1.profile
+    ], Page.prototype, "onLoaded", null);
     return Page;
 }(page_common_1.PageBase));
 exports.Page = Page;

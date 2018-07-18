@@ -15,7 +15,7 @@ var ScrollView = (function (_super) {
     }
     Object.defineProperty(ScrollView.prototype, "horizontalOffset", {
         get: function () {
-            var nativeView = this.nativeView;
+            var nativeView = this.nativeViewProtected;
             if (!nativeView) {
                 return 0;
             }
@@ -26,7 +26,7 @@ var ScrollView = (function (_super) {
     });
     Object.defineProperty(ScrollView.prototype, "verticalOffset", {
         get: function () {
-            var nativeView = this.nativeView;
+            var nativeView = this.nativeViewProtected;
             if (!nativeView) {
                 return 0;
             }
@@ -37,7 +37,7 @@ var ScrollView = (function (_super) {
     });
     Object.defineProperty(ScrollView.prototype, "scrollableWidth", {
         get: function () {
-            var nativeView = this.nativeView;
+            var nativeView = this.nativeViewProtected;
             if (!nativeView || this.orientation !== "horizontal") {
                 return 0;
             }
@@ -48,7 +48,7 @@ var ScrollView = (function (_super) {
     });
     Object.defineProperty(ScrollView.prototype, "scrollableHeight", {
         get: function () {
-            var nativeView = this.nativeView;
+            var nativeView = this.nativeViewProtected;
             if (!nativeView || this.orientation !== "vertical") {
                 return 0;
             }
@@ -57,8 +57,19 @@ var ScrollView = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    ScrollView.prototype[scroll_view_common_1.scrollBarIndicatorVisibleProperty.getDefault] = function () {
+        return true;
+    };
+    ScrollView.prototype[scroll_view_common_1.scrollBarIndicatorVisibleProperty.setNative] = function (value) {
+        if (this.orientation === "horizontal") {
+            this.nativeViewProtected.setHorizontalScrollBarEnabled(value);
+        }
+        else {
+            this.nativeViewProtected.setVerticalScrollBarEnabled(value);
+        }
+    };
     ScrollView.prototype.scrollToVerticalOffset = function (value, animated) {
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         if (nativeView && this.orientation === "vertical") {
             value *= scroll_view_common_1.layout.getDisplayDensity();
             if (animated) {
@@ -70,7 +81,7 @@ var ScrollView = (function (_super) {
         }
     };
     ScrollView.prototype.scrollToHorizontalOffset = function (value, animated) {
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         if (nativeView && this.orientation === "horizontal") {
             value *= scroll_view_common_1.layout.getDisplayDensity();
             if (animated) {
@@ -82,15 +93,16 @@ var ScrollView = (function (_super) {
         }
     };
     ScrollView.prototype.createNativeView = function () {
-        var nativeView = this.orientation === "horizontal" ? new org.nativescript.widgets.HorizontalScrollView(this._context) : new org.nativescript.widgets.VerticalScrollView(this._context);
+        return this.orientation === "horizontal" ? new org.nativescript.widgets.HorizontalScrollView(this._context) : new org.nativescript.widgets.VerticalScrollView(this._context);
+    };
+    ScrollView.prototype.initNativeView = function () {
         if (this._androidViewId < 0) {
             this._androidViewId = android.view.View.generateViewId();
         }
-        nativeView.setId(this._androidViewId);
-        return nativeView;
+        this.nativeViewProtected.setId(this._androidViewId);
     };
     ScrollView.prototype._onOrientationChanged = function () {
-        if (this.nativeView) {
+        if (this.nativeViewProtected) {
             var parent_1 = this.parent;
             if (parent_1) {
                 parent_1._removeView(this);
@@ -108,10 +120,10 @@ var ScrollView = (function (_super) {
                 }
             }
         });
-        this.nativeView.getViewTreeObserver().addOnScrollChangedListener(this.handler);
+        this.nativeViewProtected.getViewTreeObserver().addOnScrollChangedListener(this.handler);
     };
     ScrollView.prototype._onScrollChanged = function () {
-        var nativeView = this.nativeView;
+        var nativeView = this.nativeViewProtected;
         if (nativeView) {
             var newScrollX = nativeView.getScrollX();
             var newScrollY = nativeView.getScrollY();
@@ -128,10 +140,11 @@ var ScrollView = (function (_super) {
         }
     };
     ScrollView.prototype.dettachNative = function () {
-        this.nativeView.getViewTreeObserver().removeOnScrollChangedListener(this.handler);
+        this.nativeViewProtected.getViewTreeObserver().removeOnScrollChangedListener(this.handler);
         this.handler = null;
     };
     return ScrollView;
 }(scroll_view_common_1.ScrollViewBase));
 exports.ScrollView = ScrollView;
+ScrollView.prototype.recycleNativeView = "never";
 //# sourceMappingURL=scroll-view.js.map

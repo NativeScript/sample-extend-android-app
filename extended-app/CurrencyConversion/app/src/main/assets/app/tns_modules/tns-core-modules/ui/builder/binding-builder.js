@@ -81,19 +81,19 @@ function getParamsArray(value) {
     var indexReached = 0;
     var singleQuoteBlock, doubleQuoteBlock = false;
     for (i = 0; i < value.length; i++) {
-        if (value[i] === '"') {
+        if (value[i] === "\"") {
             doubleQuoteBlock = !doubleQuoteBlock;
         }
         if (value[i] === "'") {
             singleQuoteBlock = !singleQuoteBlock;
         }
-        if (value[i] === '(' || value[i] === '[') {
+        if (value[i] === "(" || value[i] === "[") {
             skipComma++;
         }
-        if (value[i] === ')' || value[i] === ']') {
+        if (value[i] === ")" || value[i] === "]") {
             skipComma--;
         }
-        if (value[i] === ',' && skipComma === 0 && !(singleQuoteBlock || doubleQuoteBlock)) {
+        if (value[i] === "," && skipComma === 0 && !(singleQuoteBlock || doubleQuoteBlock)) {
             result.push(value.substr(indexReached, i - indexReached));
             indexReached = i + 1;
         }

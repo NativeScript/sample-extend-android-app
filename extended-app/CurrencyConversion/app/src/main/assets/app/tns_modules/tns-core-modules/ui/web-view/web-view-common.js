@@ -14,9 +14,10 @@ var WebViewBase = (function (_super) {
     function WebViewBase() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    WebViewBase_1 = WebViewBase;
     WebViewBase.prototype._onLoadFinished = function (url, error) {
         var args = {
-            eventName: WebViewBase.loadFinishedEvent,
+            eventName: WebViewBase_1.loadFinishedEvent,
             object: this,
             url: url,
             navigationType: undefined,
@@ -26,7 +27,7 @@ var WebViewBase = (function (_super) {
     };
     WebViewBase.prototype._onLoadStarted = function (url, navigationType) {
         var args = {
-            eventName: WebViewBase.loadStartedEvent,
+            eventName: WebViewBase_1.loadStartedEvent,
             object: this,
             url: url,
             navigationType: navigationType,
@@ -59,6 +60,9 @@ var WebViewBase = (function (_super) {
         else if (src.indexOf("/") === 0) {
             src = "file://" + src;
         }
+        if (src.toLowerCase().indexOf("file:///") === 0) {
+            src = encodeURI(src);
+        }
         if (src.toLowerCase().indexOf("http://") === 0 ||
             src.toLowerCase().indexOf("https://") === 0 ||
             src.toLowerCase().indexOf("file:///") === 0) {
@@ -78,10 +82,14 @@ var WebViewBase = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    WebViewBase.loadStartedEvent = "loadStarted";
+    WebViewBase.loadFinishedEvent = "loadFinished";
+    WebViewBase = WebViewBase_1 = __decorate([
+        view_1.CSSType("WebView")
+    ], WebViewBase);
     return WebViewBase;
+    var WebViewBase_1;
 }(view_1.View));
-WebViewBase.loadStartedEvent = "loadStarted";
-WebViewBase.loadFinishedEvent = "loadFinished";
 exports.WebViewBase = WebViewBase;
 exports.srcProperty.register(WebViewBase);
 //# sourceMappingURL=web-view-common.js.map

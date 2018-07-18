@@ -1,66 +1,41 @@
 {
-  "_args": [
-    [
-      {
-        "raw": "tns-core-modules@~3.0.0",
-        "scope": null,
-        "escapedName": "tns-core-modules",
-        "name": "tns-core-modules",
-        "rawSpec": "~3.0.0",
-        "spec": ">=3.0.0 <3.1.0",
-        "type": "range"
-      },
-      "D:\\work\\extending-app\\ns-stock-ticker\\node_modules\\tns-template-hello-world-ng"
-    ]
-  ],
-  "_from": "tns-core-modules@>=3.0.0 <3.1.0",
-  "_id": "tns-core-modules@3.0.1",
-  "_inCache": true,
+  "_from": "tns-core-modules@~4.1.0",
+  "_id": "tns-core-modules@4.1.0",
+  "_inBundle": false,
+  "_integrity": "sha512-ZTpH7/zHfARrJ+1bPwbBYyqFVQO+2unnygfLW8Bu3clzpTkdwwW++1DS+Qbzw7r84+dzdVPZ7zwEVkjpfAFogw==",
   "_location": "/tns-core-modules",
-  "_nodeVersion": "6.10.3",
-  "_npmOperationalInternal": {
-    "host": "s3://npm-registry-packages",
-    "tmp": "tmp/tns-core-modules-3.0.1.tgz_1495549223117_0.5363377286121249"
-  },
-  "_npmUser": {
-    "name": "tns-bot",
-    "email": "nativescript@telerik.com"
-  },
-  "_npmVersion": "4.2.0",
   "_phantomChildren": {},
   "_requested": {
-    "raw": "tns-core-modules@~3.0.0",
-    "scope": null,
-    "escapedName": "tns-core-modules",
+    "type": "range",
+    "registry": true,
+    "raw": "tns-core-modules@~4.1.0",
     "name": "tns-core-modules",
-    "rawSpec": "~3.0.0",
-    "spec": ">=3.0.0 <3.1.0",
-    "type": "range"
+    "escapedName": "tns-core-modules",
+    "rawSpec": "~4.1.0",
+    "saveSpec": null,
+    "fetchSpec": "~4.1.0"
   },
   "_requiredBy": [
     "/tns-template-hello-world-ng"
   ],
-  "_resolved": "https://registry.npmjs.org/tns-core-modules/-/tns-core-modules-3.0.1.tgz",
-  "_shasum": "08cd7b72c98e6f563fbba536668a50c04dd1a5fd",
-  "_shrinkwrap": null,
-  "_spec": "tns-core-modules@~3.0.0",
-  "_where": "D:\\work\\extending-app\\ns-stock-ticker\\node_modules\\tns-template-hello-world-ng",
+  "_resolved": "https://registry.npmjs.org/tns-core-modules/-/tns-core-modules-4.1.0.tgz",
+  "_shasum": "f838f0e040b9cdef8d361ba7392dfece51762fc2",
+  "_spec": "tns-core-modules@~4.1.0",
+  "_where": "/Users/trifonov/Work/sample-extend-android-app-updated/ns-stock-ticker/node_modules/tns-template-hello-world-ng",
+  "bundleDependencies": false,
   "dependencies": {
-    "tns-core-modules-widgets": "3.0.1"
+    "tns-core-modules-widgets": "4.1.0"
   },
+  "deprecated": false,
   "description": "Telerik NativeScript Core Modules",
   "devDependencies": {
     "@types/node": "~7.0.5",
     "tns-platform-declarations": "*"
   },
-  "directories": {},
-  "dist": {
-    "shasum": "08cd7b72c98e6f563fbba536668a50c04dd1a5fd",
-    "tarball": "https://registry.npmjs.org/tns-core-modules/-/tns-core-modules-3.0.1.tgz"
-  },
   "files": [
     "**/*.d.ts",
     "**/*.js",
+    "**/package.json",
     "!android17.d.ts",
     "!ios.d.ts",
     "!bin/",
@@ -74,41 +49,27 @@
   ],
   "homepage": "https://www.nativescript.org",
   "license": "Apache-2.0",
-  "maintainers": [
-    {
-      "name": "hdeshev",
-      "email": "hristo@deshev.com"
-    },
-    {
-      "name": "hhristov",
-      "email": "hristo.hristov@outlook.com"
-    },
-    {
-      "name": "panayot.cankov",
-      "email": "panayot.cankov@telerik.com"
-    },
-    {
-      "name": "tns-bot",
-      "email": "nativescript@telerik.com"
-    },
-    {
-      "name": "vakrilov",
-      "email": "alexander.vakrilov@gmail.com"
-    }
-  ],
   "name": "tns-core-modules",
   "nativescript": {
     "platforms": {
-      "ios": "2.1.1",
-      "android": "2.1.1"
+      "ios": "4.0.0",
+      "android": "4.0.0"
     }
   },
-  "optionalDependencies": {},
-  "readme": "ERROR: No README data found!",
   "repository": {
     "type": "git",
-    "url": "https://github.com/NativeScript/NativeScript/commit/77c3ea8dc30847721006743c25a0f2d7ca1bf6e7"
+    "url": "https://github.com/NativeScript/NativeScript/commit/86f9d3870688f1e7a759fa72061ea07d5d488e09"
+  },
+  "snapshot": {
+    "android": {
+      "tns-java-classes": {
+        "modules": [
+          "ui/frame/activity",
+          "ui/frame/fragment"
+        ]
+      }
+    }
   },
   "typings": "tns-core-modules.d.ts",
-  "version": "3.0.1"
+  "version": "4.1.0"
 }
