@@ -1,0 +1,8 @@
+{
+    "android": {
+        "v8Flags": "--expose_gc"
+    },
+    "main": "starter",
+    "name": "tns-template-hello-world-ng",
+    "version": "4.1.0"
+}
