@@ -5,7 +5,7 @@
  */
 package org.nativescript.currencyconversion;
 
-@com.tns.JavaScriptImplementation(javaScriptFile = "./vendor.js")
+@com.tns.JavaScriptImplementation(javaScriptFile = "./bundle.js")
 public class MyNativeScriptActivity extends android.app.Activity implements com.tns.NativeScriptHashCodeProvider {
 	public MyNativeScriptActivity(){
 		super();

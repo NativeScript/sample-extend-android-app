@@ -185,6 +185,56 @@ module.exports = webpackAsyncContext;
 
 /***/ }),
 
+/***/ "./MyNativeScriptActivity.ts":
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var ui_frame__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__("../node_modules/tns-core-modules/ui/frame/frame.js");
+/* harmony import */ var ui_frame__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(ui_frame__WEBPACK_IMPORTED_MODULE_0__);
+/// <reference path="../node_modules/tns-platform-declarations/android.d.ts" />
+
+var MyNativeScriptActivity = /** @class */ (function (_super) {
+    __extends(MyNativeScriptActivity, _super);
+    function MyNativeScriptActivity() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    MyNativeScriptActivity.prototype.onCreate = function (savedInstanceState) {
+        if (!this._callbacks) {
+            Object(ui_frame__WEBPACK_IMPORTED_MODULE_0__["setActivityCallbacks"])(this);
+        }
+        this._callbacks.onCreate(this, savedInstanceState, _super.prototype.onCreate);
+    };
+    MyNativeScriptActivity.prototype.onSaveInstanceState = function (outState) {
+        this._callbacks.onSaveInstanceState(this, outState, _super.prototype.onSaveInstanceState);
+    };
+    MyNativeScriptActivity.prototype.onStart = function () {
+        this._callbacks.onStart(this, _super.prototype.onStart);
+    };
+    MyNativeScriptActivity.prototype.onStop = function () {
+        this._callbacks.onStop(this, _super.prototype.onStop);
+    };
+    MyNativeScriptActivity.prototype.onDestroy = function () {
+        this._callbacks.onDestroy(this, _super.prototype.onDestroy);
+    };
+    MyNativeScriptActivity.prototype.onBackPressed = function () {
+        this._callbacks.onBackPressed(this, _super.prototype.onBackPressed);
+    };
+    MyNativeScriptActivity.prototype.onRequestPermissionsResult = function (requestCode, permissions, grantResults) {
+        this._callbacks.onRequestPermissionsResult(this, requestCode, permissions, grantResults, undefined /*TODO: Enable if needed*/);
+    };
+    MyNativeScriptActivity.prototype.onActivityResult = function (requestCode, resultCode, data) {
+        this._callbacks.onActivityResult(this, requestCode, resultCode, data, _super.prototype.onActivityResult);
+    };
+    MyNativeScriptActivity = __decorate([
+        JavaProxy("org.nativescript.currencyconversion.MyNativeScriptActivity")
+    ], MyNativeScriptActivity);
+    return MyNativeScriptActivity;
+}(android.app.Activity));
+
+
+/***/ }),
+
 /***/ "./app-routing.module.ts":
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -328,7 +378,7 @@ __webpack_require__.r(__webpack_exports__);
         if (!global["__snapshot"]) {
             __webpack_require__("../node_modules/tns-core-modules/ui/frame/frame.js");
 __webpack_require__("../node_modules/tns-core-modules/ui/frame/activity.js");
-__webpack_require__("./MyNativeScriptActivity.js");
+__webpack_require__("./MyNativeScriptActivity.ts");
         }
 
         

@@ -14,7 +14,7 @@ module.exports = env => {
     const appComponents = [
         "tns-core-modules/ui/frame",
         "tns-core-modules/ui/frame/activity",
-        resolve(__dirname, "app/MyNativeScriptActivity.js"),
+        resolve(__dirname, "app/MyNativeScriptActivity"),
     ];
 
     const platform = env && (env.android && "android" || env.ios && "ios");
