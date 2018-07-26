@@ -1,39 +1,42 @@
 {
-  "_from": "@angular/core@~6.0.0",
+  "_args": [
+    [
+      "@angular/core@6.0.9",
+      "/Users/trifonov/Work/sample-extend-android-app/ns-stock-ticker"
+    ]
+  ],
+  "_from": "@angular/core@6.0.9",
   "_id": "@angular/core@6.0.9",
   "_inBundle": false,
   "_integrity": "sha512-NeEUgymsR/tLvWeEAA4mGEX/S4hHbIo/2uwPGGAQAvzlk+pL7xqPoFSMKeqQahdTnWSmYa/2+X33OdJgXKKXyg==",
   "_location": "/@angular/core",
   "_phantomChildren": {},
   "_requested": {
-    "type": "range",
+    "type": "version",
     "registry": true,
-    "raw": "@angular/core@~6.0.0",
+    "raw": "@angular/core@6.0.9",
     "name": "@angular/core",
     "escapedName": "@angular%2fcore",
     "scope": "@angular",
-    "rawSpec": "~6.0.0",
+    "rawSpec": "6.0.9",
     "saveSpec": null,
-    "fetchSpec": "~6.0.0"
+    "fetchSpec": "6.0.9"
   },
   "_requiredBy": [
-    "/tns-template-hello-world-ng"
+    "/"
   ],
   "_resolved": "https://registry.npmjs.org/@angular/core/-/core-6.0.9.tgz",
-  "_shasum": "a68cc0f5ddffa535df65f3e798ba2fcd6f6eec1b",
-  "_spec": "@angular/core@~6.0.0",
-  "_where": "/Users/trifonov/Work/sample-extend-android-app-updated/ns-stock-ticker/node_modules/tns-template-hello-world-ng",
+  "_spec": "6.0.9",
+  "_where": "/Users/trifonov/Work/sample-extend-android-app/ns-stock-ticker",
   "author": {
     "name": "angular"
   },
   "bugs": {
     "url": "https://github.com/angular/angular/issues"
   },
-  "bundleDependencies": false,
   "dependencies": {
     "tslib": "^1.9.0"
   },
-  "deprecated": false,
   "description": "Angular - the core framework",
   "es2015": "./fesm2015/core.js",
   "esm2015": "./esm2015/core.js",

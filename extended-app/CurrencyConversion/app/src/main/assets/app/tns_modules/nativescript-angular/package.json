@@ -1,27 +1,32 @@
 {
-  "_from": "nativescript-angular@~6.0.0",
+  "_args": [
+    [
+      "nativescript-angular@6.0.6",
+      "/Users/trifonov/Work/sample-extend-android-app/ns-stock-ticker"
+    ]
+  ],
+  "_from": "nativescript-angular@6.0.6",
   "_id": "nativescript-angular@6.0.6",
   "_inBundle": false,
   "_integrity": "sha512-9P/JfmHbPVfsJb1zrU5QEKVFsxAWgqymf+U85n4Od0H+N8tm69+wPTEf+luMcNXlyC/iB2L9RqYloxml4q9Elw==",
   "_location": "/nativescript-angular",
   "_phantomChildren": {},
   "_requested": {
-    "type": "range",
+    "type": "version",
     "registry": true,
-    "raw": "nativescript-angular@~6.0.0",
+    "raw": "nativescript-angular@6.0.6",
     "name": "nativescript-angular",
     "escapedName": "nativescript-angular",
-    "rawSpec": "~6.0.0",
+    "rawSpec": "6.0.6",
     "saveSpec": null,
-    "fetchSpec": "~6.0.0"
+    "fetchSpec": "6.0.6"
   },
   "_requiredBy": [
-    "/tns-template-hello-world-ng"
+    "/"
   ],
   "_resolved": "https://registry.npmjs.org/nativescript-angular/-/nativescript-angular-6.0.6.tgz",
-  "_shasum": "3cc0e754dc4211ef9b5005c791d723260f2e38e6",
-  "_spec": "nativescript-angular@~6.0.0",
-  "_where": "/Users/trifonov/Work/sample-extend-android-app-updated/ns-stock-ticker/node_modules/tns-template-hello-world-ng",
+  "_spec": "6.0.6",
+  "_where": "/Users/trifonov/Work/sample-extend-android-app/ns-stock-ticker",
   "author": {
     "name": "NativeScript Team"
   },
@@ -31,7 +36,6 @@
   "bugs": {
     "url": "https://github.com/NativeScript/nativescript-angular/issues"
   },
-  "bundleDependencies": false,
   "contributors": [
     {
       "name": "Hristo Deshev",
@@ -50,7 +54,6 @@
     "nativescript-intl": "^3.0.0",
     "reflect-metadata": "^0.1.8"
   },
-  "deprecated": false,
   "description": "An Angular renderer that lets you build mobile apps with NativeScript.",
   "devDependencies": {
     "@angular/animations": "~6.0.6",
