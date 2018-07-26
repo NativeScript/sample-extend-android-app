@@ -1,27 +1,35 @@
 {
-  "_from": "rxjs@~6.1.0",
+  "_args": [
+    [
+      "rxjs@6.1.0",
+      "/Users/trifonov/Work/sample-extend-android-app/ns-stock-ticker"
+    ]
+  ],
+  "_from": "rxjs@6.1.0",
   "_id": "rxjs@6.1.0",
   "_inBundle": false,
   "_integrity": "sha512-lMZdl6xbHJCSb5lmnb6nOhsoBVCyoDC5LDJQK9WWyq+tsI7KnlDIZ0r0AZAlBpRPLbwQA9kzSBAZwNIZEZ+hcw==",
   "_location": "/rxjs",
   "_phantomChildren": {},
   "_requested": {
-    "type": "range",
+    "type": "version",
     "registry": true,
-    "raw": "rxjs@~6.1.0",
+    "raw": "rxjs@6.1.0",
     "name": "rxjs",
     "escapedName": "rxjs",
-    "rawSpec": "~6.1.0",
+    "rawSpec": "6.1.0",
     "saveSpec": null,
-    "fetchSpec": "~6.1.0"
+    "fetchSpec": "6.1.0"
   },
   "_requiredBy": [
-    "/tns-template-hello-world-ng"
+    "/",
+    "/@angular-devkit/core",
+    "/@ngtools/webpack/@angular-devkit/core",
+    "/listr"
   ],
   "_resolved": "https://registry.npmjs.org/rxjs/-/rxjs-6.1.0.tgz",
-  "_shasum": "833447de4e4f6427b9cec3e5eb9f56415cd28315",
-  "_spec": "rxjs@~6.1.0",
-  "_where": "/Users/trifonov/Work/sample-extend-android-app-updated/ns-stock-ticker/node_modules/tns-template-hello-world-ng",
+  "_spec": "6.1.0",
+  "_where": "/Users/trifonov/Work/sample-extend-android-app/ns-stock-ticker",
   "author": {
     "name": "Ben Lesh",
     "email": "ben@benlesh.com"
@@ -29,7 +37,6 @@
   "bugs": {
     "url": "https://github.com/ReactiveX/RxJS/issues"
   },
-  "bundleDependencies": false,
   "config": {
     "commitizen": {
       "path": "cz-conventional-changelog"
@@ -64,7 +71,6 @@
   "dependencies": {
     "tslib": "^1.9.0"
   },
-  "deprecated": false,
   "description": "Reactive Extensions for modern JavaScript",
   "devDependencies": {
     "@angular-devkit/build-optimizer": "0.4.6",

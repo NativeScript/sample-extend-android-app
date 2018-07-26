@@ -1,32 +1,35 @@
 {
-  "_from": "tns-core-modules@~4.1.0",
+  "_args": [
+    [
+      "tns-core-modules@4.1.0",
+      "/Users/trifonov/Work/sample-extend-android-app/ns-stock-ticker"
+    ]
+  ],
+  "_from": "tns-core-modules@4.1.0",
   "_id": "tns-core-modules@4.1.0",
   "_inBundle": false,
   "_integrity": "sha512-ZTpH7/zHfARrJ+1bPwbBYyqFVQO+2unnygfLW8Bu3clzpTkdwwW++1DS+Qbzw7r84+dzdVPZ7zwEVkjpfAFogw==",
   "_location": "/tns-core-modules",
   "_phantomChildren": {},
   "_requested": {
-    "type": "range",
+    "type": "version",
     "registry": true,
-    "raw": "tns-core-modules@~4.1.0",
+    "raw": "tns-core-modules@4.1.0",
     "name": "tns-core-modules",
     "escapedName": "tns-core-modules",
-    "rawSpec": "~4.1.0",
+    "rawSpec": "4.1.0",
     "saveSpec": null,
-    "fetchSpec": "~4.1.0"
+    "fetchSpec": "4.1.0"
   },
   "_requiredBy": [
-    "/tns-template-hello-world-ng"
+    "/"
   ],
   "_resolved": "https://registry.npmjs.org/tns-core-modules/-/tns-core-modules-4.1.0.tgz",
-  "_shasum": "f838f0e040b9cdef8d361ba7392dfece51762fc2",
-  "_spec": "tns-core-modules@~4.1.0",
-  "_where": "/Users/trifonov/Work/sample-extend-android-app-updated/ns-stock-ticker/node_modules/tns-template-hello-world-ng",
-  "bundleDependencies": false,
+  "_spec": "4.1.0",
+  "_where": "/Users/trifonov/Work/sample-extend-android-app/ns-stock-ticker",
   "dependencies": {
     "tns-core-modules-widgets": "4.1.0"
   },
-  "deprecated": false,
   "description": "Telerik NativeScript Core Modules",
   "devDependencies": {
     "@types/node": "~7.0.5",

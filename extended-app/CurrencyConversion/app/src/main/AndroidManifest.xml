@@ -23,7 +23,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".MyCustomNativeScriptActivity" />
+        <activity android:name=".MyNativeScriptActivity" />
         <activity android:name="com.tns.ErrorReportActivity"/>
     </application>
 

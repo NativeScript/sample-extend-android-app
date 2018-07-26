@@ -98,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        android.content.Intent intent = new android.content.Intent(MainActivity.this, MyCustomNativeScriptActivity.class);
+        android.content.Intent intent = new android.content.Intent(MainActivity.this, MyNativeScriptActivity.class);
         intent.setAction(android.content.Intent.ACTION_DEFAULT);
         startActivity(intent);
     }

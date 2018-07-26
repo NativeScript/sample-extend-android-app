@@ -1,39 +1,42 @@
 {
-  "_from": "@angular/router@~6.0.0",
+  "_args": [
+    [
+      "@angular/router@6.0.9",
+      "/Users/trifonov/Work/sample-extend-android-app/ns-stock-ticker"
+    ]
+  ],
+  "_from": "@angular/router@6.0.9",
   "_id": "@angular/router@6.0.9",
   "_inBundle": false,
   "_integrity": "sha512-kS489FFpGWD4GEDDozfVb+eD5qf1E9cLYgsE7RO914uNMh/sJuRZt9PVu0bcX12fOOO7mTcOiWtlkefzUAJbkA==",
   "_location": "/@angular/router",
   "_phantomChildren": {},
   "_requested": {
-    "type": "range",
+    "type": "version",
     "registry": true,
-    "raw": "@angular/router@~6.0.0",
+    "raw": "@angular/router@6.0.9",
     "name": "@angular/router",
     "escapedName": "@angular%2frouter",
     "scope": "@angular",
-    "rawSpec": "~6.0.0",
+    "rawSpec": "6.0.9",
     "saveSpec": null,
-    "fetchSpec": "~6.0.0"
+    "fetchSpec": "6.0.9"
   },
   "_requiredBy": [
-    "/tns-template-hello-world-ng"
+    "/"
   ],
   "_resolved": "https://registry.npmjs.org/@angular/router/-/router-6.0.9.tgz",
-  "_shasum": "c40572031c7ff2e1dfb5279a8cb508b962a85262",
-  "_spec": "@angular/router@~6.0.0",
-  "_where": "/Users/trifonov/Work/sample-extend-android-app-updated/ns-stock-ticker/node_modules/tns-template-hello-world-ng",
+  "_spec": "6.0.9",
+  "_where": "/Users/trifonov/Work/sample-extend-android-app/ns-stock-ticker",
   "author": {
     "name": "angular"
   },
   "bugs": {
     "url": "https://github.com/angular/angular/issues"
   },
-  "bundleDependencies": false,
   "dependencies": {
     "tslib": "^1.9.0"
   },
-  "deprecated": false,
   "description": "Angular - the routing library",
   "es2015": "./fesm2015/router.js",
   "esm2015": "./esm2015/router.js",
