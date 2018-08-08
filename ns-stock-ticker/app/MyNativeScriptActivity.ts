@@ -34,7 +34,7 @@ class MyNativeScriptActivity extends android.app.Activity {
         this._callbacks.onBackPressed(this, super.onBackPressed);
     }
 
-    public onRequestPermissionsResult(requestCode: number, permissions: Array<String>, grantResults: Array<number>): void {
+    public onRequestPermissionsResult(requestCode: number, permissions: Array<string>, grantResults: Array<number>): void {
         this._callbacks.onRequestPermissionsResult(this, requestCode, permissions, grantResults, undefined /*TODO: Enable if needed*/);
     }
 
